@@ -1,0 +1,22 @@
+﻿```
+Uso:
+    -Canal de texto: @mention comando <args...>
+    -DM: comando <args...>
+    
+Info:
+    -<argumento>: indica que o argumento é obrigatório.
+    -[argumento]: indica que o argumento é opcional.
+    -[argumento...] ou <argumento...>: indica que o argumento se extende até o resto da mensagem.
+    
+Comandos:
+    Geral:
+        -comandos: mostra essa mensagem.
+        -info <texto...>: retorna informações básicas sobre um usuário.
+    Copypasta:
+        -addpasta <texto...>: adiciona um copypasta.
+        -pasta [número]: retorna um copypasta específico ou aleatório se o número não for especificado.
+        -pastaspam <número>: retorna n copypastas aleatórios.
+        -pastaC: retorna quantidade de copypastas salvos.
+    Riot:
+        -name <texto...>: retorna informações básicas sobre o(s) invocador(es). Pode ser passado como argumento até 40 invocadores, separados por vírgula.
+```

@@ -1,0 +1,7 @@
+﻿```
+Comandos restritos:
+    -reload: finaliza o bot.
+    -reloadconfig: recarrega as configurações.
+    -reloadcommandstext: recarrega os textos de comandos.
+    -spam <número> <texto...>: repete uma mensagem n vezes.
+```

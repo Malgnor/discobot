@@ -6,7 +6,7 @@ import ujson
 import os
 import random
 
-global riotApiKey, getSummonerNameUrl, ownerid, pastasNum
+global riotApiKey, getSummonerNameUrl, ownerid, pastasNum, commandsText, ownerCommandsText
 getSummonerNameUrl = 'https://br.api.pvp.net/api/lol/br/v1.4/summoner/by-name/'
 
 def getConfig():
@@ -14,14 +14,14 @@ def getConfig():
     config = RawConfigParser()
     try:
         config.read('config.cfg')
-        ownerid = int(config.get('plugin', 'ownerid'))
+        ownerid = config.get('plugin', 'ownerid').split(',')
         riotApiKey = config.get('riotapi', 'apikey')
     except(RawConfigParser.NoSectionError, RawConfigParser.NoOptionError):
         quit('The "config.cfg" file is missing or corrupt!')
         
 def createConfigFile():
     with open('config.cfg', 'w') as cfg:
-        cfg.write('[plugin]\nownerid = 000000000000000\n\n[riotapi]\napikey = **************')
+        cfg.write('[plugin]\nownerid = 000000000000000,1111111111\n\n[riotapi]\napikey = **************')
 
 def addPasta(pasta):
     global pastasNum
@@ -33,7 +33,7 @@ def addPasta(pasta):
     
 def loadPasta(num):
     if not os.path.isfile('memes'+os.path.sep+str(num)+'.txt'):
-        return 'Copypasta não encontrado'
+        return 'Copypasta não encontrado.'
     with open('memes'+os.path.sep+str(num)+'.txt', 'r') as meme:
         pasta = meme.read()
     return pasta
@@ -46,10 +46,24 @@ def countPastas():
         return count
     else:
         return 0
+
+def getCommandsText():
+    if not os.path.isfile('commands.txt'):
+        return 'commands.txt não encontrado;'
+    with open('commands.txt', 'r') as file:
+        commands = file.read()
+    return commands
+
+def getOwnerCommandsText():
+    if not os.path.isfile('ownercommands.txt'):
+        return 'ownercommands.txt não encontrado;'
+    with open('ownercommands.txt', 'r') as file:
+        commands = file.read()
+    return commands
     
 class MyPlugin(Plugin):    
     def __init__(self, bot, config):
-        global pastasNum
+        global pastasNum, commandsText, ownerCommandsText
         super(MyPlugin, self).__init__(bot, config)
         reload(sys)
         sys.setdefaultencoding('utf8')
@@ -59,10 +73,19 @@ class MyPlugin(Plugin):
         
         getConfig()
         pastasNum = countPastas()
+        commandsText = getCommandsText()
+        ownerCommandsText = getOwnerCommandsText()
+        
+    @Plugin.command('comandos')
+    def on_commandshelp_command(self, event):
+        event.msg.reply(commandsText)
+        if str(event.msg.author.id) in ownerid:
+            event.msg.reply(ownerCommandsText)
+        event.msg.reply('Código fonte: https://github.com/aamlima/discobot')
         
     @Plugin.command('reload')
     def on_reload_command(self, event):
-        if event.msg.author.id == ownerid:
+        if str(event.msg.author.id) in ownerid:
             event.msg.reply('Reloading...')
             quit("Command triggered quit.")
         else:
@@ -70,9 +93,20 @@ class MyPlugin(Plugin):
         
     @Plugin.command('reloadconfig')
     def on_reloadconfig_command(self, event):
-        if event.msg.author.id == ownerid:
+        if str(event.msg.author.id) in ownerid:
             msg = event.msg.reply('Reloading config...')
             getConfig()
+            msg.edit('Config reloaded!')
+        else:
+            event.msg.reply('Você não pode usar esse comando.')
+        
+    @Plugin.command('reloadcommandstext')
+    def on_reloadcommandstext_command(self, event):
+        if str(event.msg.author.id) in ownerid:
+            global commandsText, ownerCommandsText
+            msg = event.msg.reply('Reloading commands text...')
+            commandsText = getCommandsText()
+            ownerCommandsText = getOwnerCommandsText()
             msg.edit('Config reloaded!')
         else:
             event.msg.reply('Você não pode usar esse comando.')
@@ -112,7 +146,7 @@ class MyPlugin(Plugin):
 
     @Plugin.command('spam', '<count:int> <content:str...>')
     def on_spam_command(self, event, count, content):
-        if event.msg.author.id == ownerid:
+        if str(event.msg.author.id) in ownerid:
             for i in range(count):
                 event.msg.reply(content)
         else:
