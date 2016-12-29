@@ -1,11 +1,26 @@
 from disco.bot import Bot, Plugin
+from configparser import RawConfigParser
 import sys
 import requests
+import ujson
+import os
 
-global riotApiKey, apiKey, getSummonerNameUrl
-riotApiKey = '***************'
-apiKey = '?api_key=' +riotApiKey
+global riotApiKey, getSummonerNameUrl, ownerid
 getSummonerNameUrl = 'https://br.api.pvp.net/api/lol/br/v1.4/summoner/by-name/'
+
+def getConfig():
+    global riotApiKey, ownerid
+    config = RawConfigParser()
+    try:
+        config.read('config.cfg')
+        ownerid = config.get('plugin', 'ownerid')
+        riotApiKey = config.get('riotapi', 'apikey')
+    except(RawConfigParser.NoSectionError, RawConfigParser.NoOptionError):
+        quit('The "config.cfg" file is missing or corrupt!')
+        
+def createConfigFile():
+    with open('config.cfg', 'w') as cfg:
+        cfg.write('[plugin]\nownerid = 000000000000000\n\n[riotapi]\napikey = **************')
 
 class MyPlugin(Plugin):    
     def __init__(self, bot, config):
@@ -13,21 +28,28 @@ class MyPlugin(Plugin):
         reload(sys)
         sys.setdefaultencoding('utf8')
         
-    @Plugin.command('name','<name:str...>')
-    def on_name_command(self, event, name):
-        msg = event.msg.reply('...')
-        result = requests.get(getSummonerNameUrl+name+apiKey)
-        msg.edit("'''"+result.text+"'''")
+        if not os.path.isfile('config.cfg'):
+            createConfigFile()
         
-    @Plugin.command('oi')
-    def on_hi_command(self, event):
-        event.msg.reply('Hello ' + event.msg.author.mention)
+        getConfig()
         
     @Plugin.command('reload')
-    def on_reload(self, event):
-        msg = event.msg.reply('Reloading...')
-        self.reload()
-        msg.edit("Reloaded!")
+    def on_reload_command(self, event):
+        event.msg.reply('Reloading...')
+        quit("Command triggered quit.")
+        
+    @Plugin.command('reloadconfig')
+    def on_reload_command(self, event):
+        msg = event.msg.reply('Reloading config...')
+        getConfig()
+        msg.edit('Config reloaded!')
+        
+    @Plugin.command('name','<name:str...>')
+    def on_name_command(self, event, name):
+        msg = event.msg.reply('Procurando...')
+        result = requests.get(getSummonerNameUrl + name + '?api_key=' + riotApiKey)
+        j = ujson.loads(result.text)
+        msg.edit('```\n'+ujson.dumps(j, indent=4)+'\n```')
 
     @Plugin.listen('MessageCreate')
     def on_message_create(self, msg):
@@ -37,29 +59,6 @@ class MyPlugin(Plugin):
     def on_spam_command(self, event, count, content):
         for i in range(count):
             event.msg.reply(content)
-
-    @Plugin.command('count', group='messages')
-    def on_stats(self, event):
-        msg = event.msg.reply('Ok, one moment...')
-        msg_count = 0
-
-        for msgs in event.channel.messages_iter(bulk=True):
-            msg_count += len(msgs)
-
-        msg.edit('{} messages'.format(msg_count))
-
-    @Plugin.command('tag', '<name:str> [value:str...]')
-    def on_tag(self, event, name, value=None):
-        tags = self.storage.guild.ensure('tags')
-
-        if value:
-            tags[name] = value
-            event.msg.reply(':ok_hand:')
-        else:
-            if name in tags:
-                return event.msg.reply(tags[name])
-            else:
-                return event.msg.reply('Unknown tag: `{}`'.format(name))
 
     @Plugin.command('info', '<query:str...>')
     def on_info(self, event, query):
