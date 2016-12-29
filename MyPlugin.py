@@ -4,8 +4,9 @@ import sys
 import requests
 import ujson
 import os
+import random
 
-global riotApiKey, getSummonerNameUrl, ownerid
+global riotApiKey, getSummonerNameUrl, ownerid, pastasNum
 getSummonerNameUrl = 'https://br.api.pvp.net/api/lol/br/v1.4/summoner/by-name/'
 
 def getConfig():
@@ -22,8 +23,33 @@ def createConfigFile():
     with open('config.cfg', 'w') as cfg:
         cfg.write('[plugin]\nownerid = 000000000000000\n\n[riotapi]\napikey = **************')
 
+def addPasta(pasta):
+    global pastasNum
+    if not os.path.exists('memes'):
+        os.makedirs('memes')
+    with open('memes'+os.path.sep+str(pastasNum)+'.txt', 'w') as meme:
+        meme.write(pasta)
+    pastasNum += 1
+    
+def loadPasta(num):
+    if not os.path.isfile('memes'+os.path.sep+str(num)+'.txt'):
+        return 'Copypasta não encontrado'
+    with open('memes'+os.path.sep+str(num)+'.txt', 'r') as meme:
+        pasta = meme.read()
+    return pasta
+    
+def countPastas():
+    if os.path.exists('memes'):
+        count = 0
+        for files in os.listdir('memes'):
+            count += 1
+        return count
+    else:
+        return 0
+    
 class MyPlugin(Plugin):    
     def __init__(self, bot, config):
+        global pastasNum
         super(MyPlugin, self).__init__(bot, config)
         reload(sys)
         sys.setdefaultencoding('utf8')
@@ -32,6 +58,7 @@ class MyPlugin(Plugin):
             createConfigFile()
         
         getConfig()
+        pastasNum = countPastas()
         
     @Plugin.command('reload')
     def on_reload_command(self, event):
@@ -49,6 +76,28 @@ class MyPlugin(Plugin):
             msg.edit('Config reloaded!')
         else:
             event.msg.reply('Você não pode usar esse comando.')
+        
+    @Plugin.command('addpasta','<pasta:str...>')
+    def on_addpasta_command(self, event, pasta):
+        msg = event.msg.reply('Adicionando copypasta...')
+        addPasta(pasta)
+        msg.edit('Copypasta adicionado!')
+        
+    @Plugin.command('pasta','[pasta:int]')
+    def on_pasta_command(self, event, pasta=None):
+        if not pasta:
+            pasta = random.randrange(pastasNum)
+        msg = event.msg.reply('Procurando copypasta...')
+        msg.edit(loadPasta(pasta))
+        
+    @Plugin.command('pastaspam','<pasta:int>')
+    def on_pastaspam_command(self, event, pasta):
+        for i in range(pasta):
+            event.msg.reply(loadPasta(random.randrange(pastasNum)))
+        
+    @Plugin.command('pastaC')
+    def on_pastaCount_command(self, event, ):
+        event.msg.reply('Copypastas salvos: ' + str(pastasNum))
         
     @Plugin.command('name','<name:str...>')
     def on_name_command(self, event, name):
