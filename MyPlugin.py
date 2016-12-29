@@ -1,4 +1,4 @@
-from disco.bot import Bot, Plugin
+﻿from disco.bot import Bot, Plugin
 from configparser import RawConfigParser
 import sys
 import requests
@@ -13,7 +13,7 @@ def getConfig():
     config = RawConfigParser()
     try:
         config.read('config.cfg')
-        ownerid = config.get('plugin', 'ownerid')
+        ownerid = int(config.get('plugin', 'ownerid'))
         riotApiKey = config.get('riotapi', 'apikey')
     except(RawConfigParser.NoSectionError, RawConfigParser.NoOptionError):
         quit('The "config.cfg" file is missing or corrupt!')
@@ -35,14 +35,20 @@ class MyPlugin(Plugin):
         
     @Plugin.command('reload')
     def on_reload_command(self, event):
-        event.msg.reply('Reloading...')
-        quit("Command triggered quit.")
+        if event.msg.author.id == ownerid:
+            event.msg.reply('Reloading...')
+            quit("Command triggered quit.")
+        else:
+            event.msg.reply('Você não pode usar esse comando.')
         
     @Plugin.command('reloadconfig')
-    def on_reload_command(self, event):
-        msg = event.msg.reply('Reloading config...')
-        getConfig()
-        msg.edit('Config reloaded!')
+    def on_reloadconfig_command(self, event):
+        if event.msg.author.id == ownerid:
+            msg = event.msg.reply('Reloading config...')
+            getConfig()
+            msg.edit('Config reloaded!')
+        else:
+            event.msg.reply('Você não pode usar esse comando.')
         
     @Plugin.command('name','<name:str...>')
     def on_name_command(self, event, name):
@@ -57,8 +63,11 @@ class MyPlugin(Plugin):
 
     @Plugin.command('spam', '<count:int> <content:str...>')
     def on_spam_command(self, event, count, content):
-        for i in range(count):
-            event.msg.reply(content)
+        if event.msg.author.id == ownerid:
+            for i in range(count):
+                event.msg.reply(content)
+        else:
+            event.msg.reply('Você não pode usar esse comando.')
 
     @Plugin.command('info', '<query:str...>')
     def on_info(self, event, query):
