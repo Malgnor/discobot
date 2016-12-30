@@ -6,8 +6,7 @@ import ujson
 import os
 import random
 
-global riotApiKey, getSummonerNameUrl, ownerid, pastasNum, commandsText, ownerCommandsText
-getSummonerNameUrl = 'https://br.api.pvp.net/api/lol/br/v1.4/summoner/by-name/'
+global riotApiKey, ownerid, pastasNum, commandsText, ownerCommandsText
 
 def getConfig():
     global riotApiKey, ownerid
@@ -113,9 +112,16 @@ class MyPlugin(Plugin):
         
     @Plugin.command('addpasta','<pasta:str...>')
     def on_addpasta_command(self, event, pasta):
+        if pasta == loadPasta(pastasNum-1):
+            print("Duplicate pasta")
+            return
         msg = event.msg.reply('Adicionando copypasta...')
         addPasta(pasta)
         msg.edit('Copypasta adicionado!')
+        for key in event.msg.embeds:
+            print(key.title, key.type, key.url)
+        for key in event.msg.attachments.keys():
+            print(event.msg.attachments[key].filename, event.msg.attachments[key].url)
         
     @Plugin.command('pasta','[pasta:int]')
     def on_pasta_command(self, event, pasta=None):
@@ -136,13 +142,8 @@ class MyPlugin(Plugin):
     @Plugin.command('name','<name:str...>')
     def on_name_command(self, event, name):
         msg = event.msg.reply('Procurando...')
-        result = requests.get(getSummonerNameUrl + name + '?api_key=' + riotApiKey)
-        j = ujson.loads(result.text)
-        msg.edit('```\n'+ujson.dumps(j, indent=4)+'\n```')
-
-    @Plugin.listen('MessageCreate')
-    def on_message_create(self, msg):
-        self.log.info('Message created: {}: {}'.format(msg.author, msg.content))
+        result = requests.get('https://br.api.pvp.net/api/lol/br/v1.4/summoner/by-name/' + name + '?api_key=' + riotApiKey)
+        msg.edit('```\n'+ujson.dumps(ujson.loads(result.text), indent=4)+'\n```')
 
     @Plugin.command('spam', '<count:int> <content:str...>')
     def on_spam_command(self, event, count, content):
@@ -166,12 +167,20 @@ class MyPlugin(Plugin):
             parts.append('ID: {}'.format(user.id))
             parts.append('Username: {}'.format(user.username))
             parts.append('Discriminator: {}'.format(user.discriminator))
+            if user.verified:
+                parts.append('Verified: {}'.format(user.verified))
+            if user.bot:
+                parts.append('Bot: {}'.format(user.bot))
 
             if event.channel.guild:
                 member = event.channel.guild.get_member(user)
                 parts.append('Nickname: {}'.format(member.nick))
                 parts.append('Joined At: {}'.format(member.joined_at))
-
-            event.msg.reply('```\n{}\n```'.format(
-                '\n'.join(parts)
-            ))
+                
+            avatar_url = ''
+            if user.avatar:
+                avatar_url = '\nhttps://discordapp.com/api/users/{}/avatars/{}.jpg'.format(user.id, user.avatar)
+            
+            event.msg.reply(('```\n{}\n```'.format(
+                '\n'.join(parts))
+            )+avatar_url)
