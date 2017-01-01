@@ -132,6 +132,17 @@ class MyPlugin(Plugin):
             event.msg.reply('"' + name + '" apagado.')
             if autosave:
                 saveCopyPastas(copypastas)
+        
+    @Plugin.command('copypastaRename', '<oldname:str> <newname:str>')
+    def on_copypastaRename_command(self, event, oldname, newname):
+        if not oldname in copypastas:
+            event.msg.reply('"' + oldname + '" inexistente.')
+        else:
+            copypastas[newname] = copypastas[oldname]
+            del copypastas[oldname]
+            event.msg.reply('"' + oldname + '" renomeado para "'+ newname + '".')
+            if autosave:
+                saveCopyPastas(copypastas)
 
     @Plugin.command('copypasta', '[copypasta:str]')
     def on_copypasta_command(self, event, copypasta=None):

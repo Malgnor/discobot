@@ -16,6 +16,7 @@ Comandos:
         -copypasta [nome]: retorna um copypasta específico ou aleatório se o nome não for especificado.
         -copypastaAdd <nome> <copypasta...>: adiciona um copypasta.
         -copypastaMod <nome> <copypasta...>: modifica um copypasta.
+        -copypastaRename <nome> <novonome>: renomeia um copypasta.
         -copypastaDel <nome>: apaga um copypasta.
         -copypastaList: lista os copypasta disponíveis.
         -copypastaSpam <quantidade>: retorna n copypastas aleatórios.
