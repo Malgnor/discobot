@@ -11,12 +11,14 @@ Info:
 Comandos:
     Geral:
         -comandos: mostra essa mensagem.
-        -info <texto...>: retorna informações básicas sobre um usuário.
+        -info <nome...>: retorna informações básicas sobre um usuário.
     Copypasta:
-        -addpasta <texto...>: adiciona um copypasta.
-        -pasta [número]: retorna um copypasta específico ou aleatório se o número não for especificado.
-        -pastaspam <número>: retorna n copypastas aleatórios.
-        -pastaC: retorna quantidade de copypastas salvos.
+        -copypasta [nome]: retorna um copypasta específico ou aleatório se o nome não for especificado.
+        -copypastaAdd <nome> <copypasta...>: adiciona um copypasta.
+        -copypastaMod <nome> <copypasta...>: modifica um copypasta.
+        -copypastaDel <nome>: apaga um copypasta.
+        -copypastaList: lista os copypasta disponíveis.
+        -copypastaSpam <quantidade>: retorna n copypastas aleatórios.
     Riot:
-        -name <texto...>: retorna informações básicas sobre o(s) invocador(es). Pode ser passado como argumento até 40 invocadores, separados por vírgula.
+        -name <invocadores...>: retorna informações básicas sobre o(s) invocador(es). Pode ser passado como argumento até 40 invocadores, separados por vírgula.
 ```

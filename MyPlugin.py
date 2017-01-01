@@ -6,63 +6,52 @@ import ujson
 import os
 import random
 
-global riotApiKey, ownerid, pastasNum, commandsText, ownerCommandsText
+global riotApiKey, ownerid, commandsText, ownerCommandsText, autosave, copypastas
 
 def getConfig():
-    global riotApiKey, ownerid
+    global riotApiKey, ownerid, autosave
     config = RawConfigParser()
     try:
         config.read('config.cfg')
         ownerid = config.get('plugin', 'ownerid').split(',')
+        autosave = bool(int(config.get('plugin', 'autosave')))
         riotApiKey = config.get('riotapi', 'apikey')
     except(RawConfigParser.NoSectionError, RawConfigParser.NoOptionError):
         quit('The "config.cfg" file is missing or corrupt!')
         
 def createConfigFile():
     with open('config.cfg', 'w') as cfg:
-        cfg.write('[plugin]\nownerid = 000000000000000,1111111111\n\n[riotapi]\napikey = **************')
-
-def addPasta(pasta):
-    global pastasNum
-    if not os.path.exists('memes'):
-        os.makedirs('memes')
-    with open('memes'+os.path.sep+str(pastasNum)+'.txt', 'w') as meme:
-        meme.write(pasta)
-    pastasNum += 1
-    
-def loadPasta(num):
-    if not os.path.isfile('memes'+os.path.sep+str(num)+'.txt'):
-        return 'Copypasta não encontrado.'
-    with open('memes'+os.path.sep+str(num)+'.txt', 'r') as meme:
-        pasta = meme.read()
-    return pasta
-    
-def countPastas():
-    if os.path.exists('memes'):
-        count = 0
-        for files in os.listdir('memes'):
-            count += 1
-        return count
-    else:
-        return 0
+        cfg.write('[plugin]\nownerid = 000000000000000,1111111111\nautosave = True\n\n[riotapi]\napikey = **************')
 
 def getCommandsText():
     if not os.path.isfile('commands.txt'):
-        return 'commands.txt não encontrado;'
+        return 'commands.txt não encontrado.'
     with open('commands.txt', 'r') as file:
         commands = file.read()
     return commands
 
 def getOwnerCommandsText():
     if not os.path.isfile('ownercommands.txt'):
-        return 'ownercommands.txt não encontrado;'
+        return 'ownercommands.txt não encontrado.'
     with open('ownercommands.txt', 'r') as file:
         commands = file.read()
     return commands
     
+def getCopyPastas():
+    if not os.path.isfile('copypastas.json'):
+        print 'copypastas.json não encontrado.'
+        return {}
+    with open('copypastas.json', 'r') as file:
+        copypastas = ujson.load(file)
+    return copypastas
+    
+def saveCopyPastas(copypastas):
+    with open('copypastas.json', 'w') as file:
+        file.write(ujson.dumps(copypastas, indent=4))
+    
 class MyPlugin(Plugin):    
     def __init__(self, bot, config):
-        global pastasNum, commandsText, ownerCommandsText
+        global commandsText, ownerCommandsText, autosave, copypastas
         super(MyPlugin, self).__init__(bot, config)
         reload(sys)
         sys.setdefaultencoding('utf8')
@@ -71,9 +60,9 @@ class MyPlugin(Plugin):
             createConfigFile()
         
         getConfig()
-        pastasNum = countPastas()
         commandsText = getCommandsText()
         ownerCommandsText = getOwnerCommandsText()
+        copypastas = getCopyPastas()
         
     @Plugin.command('comandos')
     def on_commandshelp_command(self, event):
@@ -110,34 +99,74 @@ class MyPlugin(Plugin):
         else:
             event.msg.reply('Você não pode usar esse comando.')
         
-    @Plugin.command('addpasta','<pasta:str...>')
-    def on_addpasta_command(self, event, pasta):
-        if pasta == loadPasta(pastasNum-1):
-            print("Duplicate pasta")
-            return
-        msg = event.msg.reply('Adicionando copypasta...')
-        addPasta(pasta)
-        msg.edit('Copypasta adicionado!')
+    @Plugin.command('copypastaAdd', '<name:str> <copypasta:str...>')
+    def on_copypastaAdd_command(self, event, name, copypasta):
+        if name in copypastas:
+            event.msg.reply('"' + name + '" já existente.\nUse "copypastaMod" para modificar um copypasta existente.')
+        else:
+            copypastas[name] = copypasta
+            event.msg.reply('"' + name + '" adicionado.')
+            if autosave:
+                saveCopyPastas(copypastas)
         for key in event.msg.embeds:
             print(key.title, key.type, key.url)
         for key in event.msg.attachments.keys():
             print(event.msg.attachments[key].filename, event.msg.attachments[key].url)
         
-    @Plugin.command('pasta','[pasta:int]')
-    def on_pasta_command(self, event, pasta=None):
-        if not pasta:
-            pasta = random.randrange(pastasNum)
-        msg = event.msg.reply('Procurando copypasta...')
-        msg.edit(loadPasta(pasta))
+    @Plugin.command('copypastaMod', '<name:str> <copypasta:str...>')
+    def on_copypastaMod_command(self, event, name, copypasta):
+        if not name in copypastas:
+            event.msg.reply('"' + name + '" inexistente.\nUse "copypastaAdd" para adicionar um novo copypasta.')
+        else:
+            copypastas[name] = copypasta
+            event.msg.reply('"' + name + '" modificado.')
+            if autosave:
+                saveCopyPastas(copypastas)
         
-    @Plugin.command('pastaspam','<pasta:int>')
-    def on_pastaspam_command(self, event, pasta):
-        for i in range(pasta):
-            event.msg.reply(loadPasta(random.randrange(pastasNum)))
-        
-    @Plugin.command('pastaC')
-    def on_pastaCount_command(self, event, ):
-        event.msg.reply('Copypastas salvos: ' + str(pastasNum))
+    @Plugin.command('copypastaDel', '<name:str>')
+    def on_copypastaDel_command(self, event, name):
+        if not name in copypastas:
+            event.msg.reply('"' + name + '" inexistente.')
+        else:
+            del copypastas[name]
+            event.msg.reply('"' + name + '" apagado.')
+            if autosave:
+                saveCopyPastas(copypastas)
+
+    @Plugin.command('copypasta', '[copypasta:str]')
+    def on_copypasta_command(self, event, copypasta=None):
+        if copypasta:
+            if copypasta in copypastas:
+                event.msg.reply(copypastas[copypasta])
+            else:
+                event.msg.reply('"' + copypasta + '" não encontrado.')
+        else:
+            keys = copypastas.keys()
+            if len(keys):
+                event.msg.reply(copypastas[keys[random.randrange(len(keys))]])
+            else:
+                event.msg.reply("Não há copypastas salvos.")
+
+    @Plugin.command('copypastaSpam', '<quantity:int>')
+    def on_copypastaSpam_command(self, event, quantity):
+        keys = copypastas.keys()
+        if len(keys):
+            for i in range(quantity):
+                event.msg.reply(copypastas[keys[random.randrange(len(keys))]])
+        else:
+            event.msg.reply("Não há copypastas salvos.")
+
+    @Plugin.command('copypastaList')
+    def on_copypastaList_command(self, event):
+        keys = copypastas.keys()
+        if len(keys):
+            res = '```\n'
+            for k in keys:
+                res += k+'\n'
+            res += '```'
+            event.msg.reply(res)
+        else:
+            event.msg.reply("Não há copypastas salvos.")
         
     @Plugin.command('name','<name:str...>')
     def on_name_command(self, event, name):
