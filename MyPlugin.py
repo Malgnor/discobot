@@ -47,7 +47,7 @@ def getCopyPastas():
     
 def saveCopyPastas(copypastas):
     with open('copypastas.json', 'w') as file:
-        file.write(ujson.dumps(copypastas, indent=4))
+        file.write(ujson.dumps(copypastas, indent=4, ensure_ascii=False))
     
 class MyPlugin(Plugin):    
     def __init__(self, bot, config):
@@ -104,24 +104,38 @@ class MyPlugin(Plugin):
         if name in copypastas:
             event.msg.reply('"' + name + '" já existente.\nUse "copypastaMod" para modificar um copypasta existente.')
         else:
-            copypastas[name] = copypasta
+            copypastas[name] = [copypasta, None, None]
             event.msg.reply('"' + name + '" adicionado.')
             if autosave:
                 saveCopyPastas(copypastas)
-        for key in event.msg.embeds:
-            print(key.title, key.type, key.url)
+        print 'Attachments: ', len(event.msg.attachments)
+        print 'Embeds: ', len(event.msg.embeds)
         for key in event.msg.attachments.keys():
             print(event.msg.attachments[key].filename, event.msg.attachments[key].url)
+        for key in event.msg.embeds:
+            print(key.title, key.type, key.url)
         
     @Plugin.command('copypastaMod', '<name:str> <copypasta:str...>')
     def on_copypastaMod_command(self, event, name, copypasta):
         if not name in copypastas:
             event.msg.reply('"' + name + '" inexistente.\nUse "copypastaAdd" para adicionar um novo copypasta.')
         else:
-            copypastas[name] = copypasta
+            copypastas[name] = [copypasta, None, None]
             event.msg.reply('"' + name + '" modificado.')
+#            if len(event.msg.attachments):
+#                copypastas[name][1] = event.msg.attachments
+#            if len(event.msg.embeds):
+#                copypastas[name][2] = []
+#                for key in event.msg.embeds:
+#                    copypastas[name][2].append(key)
             if autosave:
                 saveCopyPastas(copypastas)
+        print 'Attachments: ', len(event.msg.attachments)
+        print 'Embeds: ', len(event.msg.embeds)
+        for key in event.msg.attachments.keys():
+            print(event.msg.attachments[key].filename, event.msg.attachments[key].url)
+        for key in event.msg.embeds:
+            print(key.title, key.type, key.url)
         
     @Plugin.command('copypastaDel', '<name:str>')
     def on_copypastaDel_command(self, event, name):
@@ -148,13 +162,14 @@ class MyPlugin(Plugin):
     def on_copypasta_command(self, event, copypasta=None):
         if copypasta:
             if copypasta in copypastas:
-                event.msg.reply(copypastas[copypasta])
+                event.msg.reply(copypastas[copypasta][0], copypastas[copypasta][1], copypastas[copypasta][2])
             else:
                 event.msg.reply('"' + copypasta + '" não encontrado.')
         else:
             keys = copypastas.keys()
             if len(keys):
-                event.msg.reply(copypastas[keys[random.randrange(len(keys))]])
+                k = keys[random.randrange(len(keys))]
+                event.msg.reply(copypastas[k][0], copypastas[k][1], copypastas[k][2])
             else:
                 event.msg.reply("Não há copypastas salvos.")
 
@@ -163,7 +178,8 @@ class MyPlugin(Plugin):
         keys = copypastas.keys()
         if len(keys):
             for i in range(quantity):
-                event.msg.reply(copypastas[keys[random.randrange(len(keys))]])
+                k = keys[random.randrange(len(keys))]
+                event.msg.reply(copypastas[k][0], copypastas[k][1], copypastas[k][2])
         else:
             event.msg.reply("Não há copypastas salvos.")
 
@@ -184,7 +200,7 @@ class MyPlugin(Plugin):
         keys = copypastas.keys()
         if len(keys):
             for k in keys:
-                event.msg.reply(copypastas[k])
+                event.msg.reply(copypastas[k][0], copypastas[k][1], copypastas[k][2])
         else:
             event.msg.reply("Não há copypastas salvos.")
         
@@ -192,7 +208,7 @@ class MyPlugin(Plugin):
     def on_name_command(self, event, name):
         msg = event.msg.reply('Procurando...')
         result = requests.get('https://br.api.pvp.net/api/lol/br/v1.4/summoner/by-name/' + name + '?api_key=' + riotApiKey)
-        msg.edit('```\n'+ujson.dumps(ujson.loads(result.text), indent=4)+'\n```')
+        msg.edit('```\n'+ujson.dumps(ujson.loads(result.text), indent=4, ensure_ascii=False)+'\n```')
 
     @Plugin.command('spam', '<count:int> <content:str...>')
     def on_spam_command(self, event, count, content):
