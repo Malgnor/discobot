@@ -178,6 +178,15 @@ class MyPlugin(Plugin):
             event.msg.reply(res)
         else:
             event.msg.reply("Não há copypastas salvos.")
+
+    @Plugin.command('copypastaAll')
+    def on_copypastaAll_command(self, event):
+        keys = copypastas.keys()
+        if len(keys):
+            for k in keys:
+                event.msg.reply(copypastas[k])
+        else:
+            event.msg.reply("Não há copypastas salvos.")
         
     @Plugin.command('name','<name:str...>')
     def on_name_command(self, event, name):

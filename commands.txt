@@ -19,6 +19,7 @@ Comandos:
         -copypastaRename <nome> <novonome>: renomeia um copypasta.
         -copypastaDel <nome>: apaga um copypasta.
         -copypastaList: lista os copypasta disponíveis.
+        -copypastaAll: retorna todos os copypasta disponíveis.
         -copypastaSpam <quantidade>: retorna n copypastas aleatórios.
     Riot:
         -name <invocadores...>: retorna informações básicas sobre o(s) invocador(es). Pode ser passado como argumento até 40 invocadores, separados por vírgula.
