@@ -3,5 +3,8 @@ Comandos restritos:
     -reload: finaliza o bot.
     -reloadconfig: recarrega as configurações.
     -reloadcommandstext: recarrega os textos de comandos.
-    -spam <número> <texto...>: repete uma mensagem n vezes.
+    -spam <quantidade> <texto...>: repete uma mensagem n vezes.
+    -spamc <IDcanal> <quantidade> <texto...>: repete uma mensagem n vezes em um canal.
+    -spamsf <quantidade> <tempo> <texto...>: repete uma mensagem n vezes e se autodestrói.
+    -spamcsf <IDcanal> <quantidade> <tempo> <texto...>: repete uma mensagem n vezes e se autodestrói em um canal.
 ```

@@ -5,6 +5,7 @@ import requests
 import ujson
 import os
 import random
+import time
 
 global riotApiKey, ownerid, commandsText, ownerCommandsText, autosave, copypastas
 
@@ -69,7 +70,6 @@ class MyPlugin(Plugin):
         event.msg.reply(commandsText)
         if str(event.msg.author.id) in ownerid:
             event.msg.reply(ownerCommandsText)
-        event.msg.reply('Código fonte: https://github.com/aamlima/discobot')
         
     @Plugin.command('reload')
     def on_reload_command(self, event):
@@ -218,6 +218,42 @@ class MyPlugin(Plugin):
         else:
             event.msg.reply('Você não pode usar esse comando.')
 
+    @Plugin.command('spamsf', '<count:int> <timesf:int> <content:str...>')
+    def on_spamsf_command(self, event, count, timesf, content):
+        if str(event.msg.author.id) in ownerid:
+            msgs = []
+            for i in range(count):
+                msgs.append(event.msg.reply(content))
+            time.sleep(timesf)
+            for m in msgs:
+                m.delete()
+        else:
+            event.msg.reply('Você não pode usar esse comando.')
+
+    @Plugin.command('spamc', '<cid:int> <count:int> <content:str...>')
+    def on_spamc_command(self, event, cid, count, content):
+        if str(event.msg.author.id) in ownerid:
+            for i in range(count):
+                event.channel.client.api.channels_messages_create(cid, content)
+        else:
+            event.msg.reply('Você não pode usar esse comando.')
+
+    @Plugin.command('spamcsf', '<cid:int> <count:int> <timesf:int> <content:str...>')
+    def on_spamcsf_command(self, event, cid, count, timesf, content):
+        if str(event.msg.author.id) in ownerid:
+            msgs = []
+            for i in range(count):
+                msgs.append(event.channel.client.api.channels_messages_create(cid, content))
+            time.sleep(timesf)
+            for m in msgs:
+                m.delete()
+        else:
+            event.msg.reply('Você não pode usar esse comando.')
+
+    @Plugin.command('saychannel', '<cid:int> <content:str...>')
+    def on_saychannel_command(self, event, cid, content):
+        event.channel.client.api.channels_messages_create(cid, content)
+    
     @Plugin.command('info', '<query:str...>')
     def on_info(self, event, query):
         users = list(self.state.users.select({'username': query}, {'id': query}))
@@ -225,7 +261,7 @@ class MyPlugin(Plugin):
         if not users:
             event.msg.reply("Couldn't find user for your query: `{}`".format(query))
         elif len(users) > 1:
-            event.msg.reply('I found too many userse ({}) for your query: `{}`'.format(len(users), query))
+            event.msg.reply('I found too many users ({}) for your query: `{}`'.format(len(users), query))
         else:
             user = users[0]
             parts = []
