@@ -7,22 +7,26 @@ import os
 import random
 import time
 
-global riotApiKey, ownerid, commandsText, ownerCommandsText, autosave, copypastas
+global riotApiKey, ownerid, commandsText, ownerCommandsText, autosave, copypastas, channelLogId, copyCatId
+
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 def getConfig():
-    global riotApiKey, ownerid, autosave
+    global riotApiKey, ownerid, autosave, channelLogId
     config = RawConfigParser()
     try:
         config.read('config.cfg')
         ownerid = config.get('plugin', 'ownerid').split(',')
         autosave = bool(int(config.get('plugin', 'autosave')))
+        channelLogId = int(config.get('plugin', 'channelLogId'))
         riotApiKey = config.get('riotapi', 'apikey')
     except(RawConfigParser.NoSectionError, RawConfigParser.NoOptionError):
         quit('The "config.cfg" file is missing or corrupt!')
         
 def createConfigFile():
     with open('config.cfg', 'w') as cfg:
-        cfg.write('[plugin]\nownerid = 000000000000000,1111111111\nautosave = True\n\n[riotapi]\napikey = **************')
+        cfg.write('[plugin]\nownerid = 000000000000000,1111111111\nautosave = 1\nchannelLogId = 0000000000000000\n\n[riotapi]\napikey = **************')
 
 def getCommandsText():
     if not os.path.isfile('commands.txt'):
@@ -49,21 +53,42 @@ def getCopyPastas():
 def saveCopyPastas(copypastas):
     with open('copypastas.json', 'w') as file:
         file.write(ujson.dumps(copypastas, indent=4, ensure_ascii=False))
-    
-class MyPlugin(Plugin):    
-    def __init__(self, bot, config):
-        global commandsText, ownerCommandsText, autosave, copypastas
-        super(MyPlugin, self).__init__(bot, config)
-        reload(sys)
-        sys.setdefaultencoding('utf8')
         
-        if not os.path.isfile('config.cfg'):
-            createConfigFile()
+if not os.path.isfile('config.cfg'):
+    createConfigFile()
+
+getConfig()
+commandsText = getCommandsText()
+ownerCommandsText = getOwnerCommandsText()
+copypastas = getCopyPastas()
+copyCatId = None   
+
+class MyPlugin(Plugin):
+    @Plugin.listen('Ready')
+    def on_ready(self, event):
+        self.client.api.channels_messages_create(channelLogId, 'I am ready!')
+
+    @Plugin.listen('GuildCreate')
+    def on_guild_create(self, event):
+        if event.created:
+            self.client.api.channels_messages_create(channelLogId, 'Entrei no servidor: {}'.format(event.name))
+
+    @Plugin.listen('GuildDelete')
+    def on_guild_delete(self, event):
+        if event.deleted:
+            self.client.api.channels_messages_create(channelLogId, 'Saindo do servidor: {}'.format(event.id))
+
+    @Plugin.listen('MessageCreate')
+    def on_message_create(self, event):
+        if copyCatId == event.author.id:
+            self.client.api.channels_messages_create(event.channel_id, event.content)
         
-        getConfig()
-        commandsText = getCommandsText()
-        ownerCommandsText = getOwnerCommandsText()
-        copypastas = getCopyPastas()
+    @Plugin.command('setCopyCat', '[target:int]')
+    def on_setcopycat_command(self, event, target=None):
+        global copyCatId
+        if str(event.msg.author.id) in ownerid:
+            copyCatId = target
+            event.msg.reply('{} setado como alvo.'.format(copyCatId))
         
     @Plugin.command('comandos')
     def on_commandshelp_command(self, event):
@@ -91,7 +116,6 @@ class MyPlugin(Plugin):
     @Plugin.command('reloadcommandstext')
     def on_reloadcommandstext_command(self, event):
         if str(event.msg.author.id) in ownerid:
-            global commandsText, ownerCommandsText
             msg = event.msg.reply('Reloading commands text...')
             commandsText = getCommandsText()
             ownerCommandsText = getOwnerCommandsText()
@@ -234,7 +258,7 @@ class MyPlugin(Plugin):
     def on_spamc_command(self, event, cid, count, content):
         if str(event.msg.author.id) in ownerid:
             for i in range(count):
-                event.channel.client.api.channels_messages_create(cid, content)
+                self.client.api.channels_messages_create(cid, content)
         else:
             event.msg.reply('Você não pode usar esse comando.')
 
@@ -243,7 +267,7 @@ class MyPlugin(Plugin):
         if str(event.msg.author.id) in ownerid:
             msgs = []
             for i in range(count):
-                msgs.append(event.channel.client.api.channels_messages_create(cid, content))
+                msgs.append(self.client.api.channels_messages_create(cid, content))
             time.sleep(timesf)
             for m in msgs:
                 m.delete()
@@ -252,7 +276,7 @@ class MyPlugin(Plugin):
 
     @Plugin.command('saychannel', '<cid:int> <content:str...>')
     def on_saychannel_command(self, event, cid, content):
-        event.channel.client.api.channels_messages_create(cid, content)
+        self.client.api.channels_messages_create(cid, content)
     
     @Plugin.command('info', '<query:str...>')
     def on_info(self, event, query):

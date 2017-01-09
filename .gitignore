@@ -88,7 +88,6 @@ ENV/
 # Rope project settings
 .ropeproject
 
-config.cfg
-runloop.bat
-megapasta.txt
-copypastas.json
+*.bat
+*.cfg
+*.json
