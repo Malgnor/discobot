@@ -12,6 +12,8 @@ Comandos:
     Geral:
         -comandos: mostra essa mensagem.
         -info <nome...>: retorna informações básicas sobre um usuário.
+        -saychannel <IDcanal> <texto...>: manda um mensagem em um canal específico.
+        -faketype <IDCanal>: ativa o gatilho de digitação em um canal específico.
     Copypasta:
         -copypasta [nome]: retorna um copypasta específico ou aleatório se o nome não for especificado.
         -copypastaAdd <nome> <copypasta...>: adiciona um copypasta.

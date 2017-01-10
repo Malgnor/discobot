@@ -1,5 +1,7 @@
-﻿from disco.bot import Bot, Plugin
+﻿import disco
+from disco.bot import Bot, Plugin
 from disco.types.user import Status, Game
+from disco.types.message import MessageEmbed, MessageEmbedImage
 from configparser import RawConfigParser
 import sys
 import requests
@@ -67,7 +69,7 @@ copyCatId = None
 class MyPlugin(Plugin):
     @Plugin.listen('Ready')
     def on_ready(self, event):
-        self.client.api.channels_messages_create(channelLogId, 'I am ready!')
+        self.client.api.channels_messages_create(channelLogId, 'I am ready!\nDisco-py: {}'.format(disco.VERSION))
 
     @Plugin.listen('GuildCreate')
     def on_guild_create(self, event):
@@ -80,9 +82,20 @@ class MyPlugin(Plugin):
             self.client.api.channels_messages_create(channelLogId, 'Saindo do servidor: {}'.format(event.id))
 
     @Plugin.listen('MessageCreate')
-    def on_message_create(self, event):
+    def on_message_create(self, event):        
         if copyCatId == event.author.id:
-            self.client.api.channels_messages_create(event.channel_id, event.content)
+            e = None
+            if len(event.attachments):
+                for k in event.attachments.keys():
+                    e = MessageEmbed(title = event.attachments[k].filename, url = event.attachments[k].url)
+                    e.image = MessageEmbedImage(url = event.attachments[k].url, proxy_url = event.attachments[k].proxy_url, width = event.attachments[k].width, height = event.attachments[k].height) if event.attachments[k].width else None
+                    break
+            self.client.api.channels_messages_create(event.channel_id, event.content, event.nonce, event.tts, None, e)            
+
+    @Plugin.listen('TypingStart')
+    def on_typing_start(self, event):
+        if copyCatId == event.user_id:
+            self.client.api.channels_typing(event.channel_id)
         
     @Plugin.command('updatePresence', '<status:str> [game:str...]')
     def on_updatepresence_command(self, event, status, game=None):
@@ -91,13 +104,19 @@ class MyPlugin(Plugin):
                 status = 'ONLINE'
             self.client.update_presence(Game(name=game), Status[status])
             event.msg.reply('Atualizando status...')
+        else:
+            event.msg.reply('Você não pode usar esse comando.')
         
     @Plugin.command('setCopyCat', '[target:int]')
     def on_setcopycat_command(self, event, target=None):
         global copyCatId
         if str(event.msg.author.id) in ownerid:
+            if target == 0:
+                target = event.msg.author.id
             copyCatId = target
             event.msg.reply('{} setado como alvo.'.format(copyCatId))
+        else:
+            event.msg.reply('Você não pode usar esse comando.')
         
     @Plugin.command('comandos')
     def on_commandshelp_command(self, event):
@@ -105,10 +124,10 @@ class MyPlugin(Plugin):
         if str(event.msg.author.id) in ownerid:
             event.msg.reply(ownerCommandsText)
         
-    @Plugin.command('reload')
-    def on_reload_command(self, event):
+    @Plugin.command('quit')
+    def on_quit_command(self, event):
         if str(event.msg.author.id) in ownerid:
-            event.msg.reply('Reloading...')
+            event.msg.reply('Bye!')
             quit("Command triggered quit.")
         else:
             event.msg.reply('Você não pode usar esse comando.')
@@ -137,38 +156,32 @@ class MyPlugin(Plugin):
         if name in copypastas:
             event.msg.reply('"' + name + '" já existente.\nUse "copypastaMod" para modificar um copypasta existente.')
         else:
-            copypastas[name] = [copypasta, None, None]
+            e = None
+            if len(event.msg.attachments):
+                for k in event.msg.attachments.keys():
+                    e = MessageEmbed(title = event.msg.attachments[k].filename, url = event.msg.attachments[k].url)
+                    e.image = MessageEmbedImage(url = event.msg.attachments[k].url, proxy_url = event.msg.attachments[k].proxy_url, width = event.msg.attachments[k].width, height = event.msg.attachments[k].height) if event.msg.attachments[k].width else None
+                    break
+            copypastas[name] = [copypasta, e]
             event.msg.reply('"' + name + '" adicionado.')
             if autosave:
                 saveCopyPastas(copypastas)
-        print 'Attachments: ', len(event.msg.attachments)
-        print 'Embeds: ', len(event.msg.embeds)
-        for key in event.msg.attachments.keys():
-            print(event.msg.attachments[key].filename, event.msg.attachments[key].url)
-        for key in event.msg.embeds:
-            print(key.title, key.type, key.url)
         
     @Plugin.command('copypastaMod', '<name:str> <copypasta:str...>')
     def on_copypastaMod_command(self, event, name, copypasta):
         if not name in copypastas:
             event.msg.reply('"' + name + '" inexistente.\nUse "copypastaAdd" para adicionar um novo copypasta.')
         else:
-            copypastas[name] = [copypasta, None, None]
+            e = None
+            if len(event.msg.attachments):
+                for k in event.msg.attachments.keys():
+                    e = MessageEmbed(title = event.msg.attachments[k].filename, url = event.msg.attachments[k].url)
+                    e.image = MessageEmbedImage(url = event.msg.attachments[k].url, proxy_url = event.msg.attachments[k].proxy_url, width = event.msg.attachments[k].width, height = event.msg.attachments[k].height) if event.msg.attachments[k].width else None
+                    break
+            copypastas[name] = [copypasta, e]
             event.msg.reply('"' + name + '" modificado.')
-#            if len(event.msg.attachments):
-#                copypastas[name][1] = event.msg.attachments
-#            if len(event.msg.embeds):
-#                copypastas[name][2] = []
-#                for key in event.msg.embeds:
-#                    copypastas[name][2].append(key)
             if autosave:
                 saveCopyPastas(copypastas)
-        print 'Attachments: ', len(event.msg.attachments)
-        print 'Embeds: ', len(event.msg.embeds)
-        for key in event.msg.attachments.keys():
-            print(event.msg.attachments[key].filename, event.msg.attachments[key].url)
-        for key in event.msg.embeds:
-            print(key.title, key.type, key.url)
         
     @Plugin.command('copypastaDel', '<name:str>')
     def on_copypastaDel_command(self, event, name):
@@ -195,14 +208,14 @@ class MyPlugin(Plugin):
     def on_copypasta_command(self, event, copypasta=None):
         if copypasta:
             if copypasta in copypastas:
-                event.msg.reply(copypastas[copypasta][0], copypastas[copypasta][1], copypastas[copypasta][2])
+                event.msg.reply(copypastas[copypasta][0], event.msg.nonce, event.msg.tts, None, copypastas[copypasta][1])
             else:
                 event.msg.reply('"' + copypasta + '" não encontrado.')
         else:
             keys = copypastas.keys()
             if len(keys):
                 k = keys[random.randrange(len(keys))]
-                event.msg.reply(copypastas[k][0], copypastas[k][1], copypastas[k][2])
+                event.msg.reply(copypastas[k][0], event.msg.nonce, event.msg.tts, None, copypastas[k][1])
             else:
                 event.msg.reply("Não há copypastas salvos.")
 
@@ -212,7 +225,7 @@ class MyPlugin(Plugin):
         if len(keys):
             for i in range(quantity):
                 k = keys[random.randrange(len(keys))]
-                event.msg.reply(copypastas[k][0], copypastas[k][1], copypastas[k][2])
+                event.msg.reply(copypastas[k][0], event.msg.nonce, event.msg.tts, None, copypastas[k][1])
         else:
             event.msg.reply("Não há copypastas salvos.")
 
@@ -233,20 +246,21 @@ class MyPlugin(Plugin):
         keys = copypastas.keys()
         if len(keys):
             for k in keys:
-                event.msg.reply(copypastas[k][0], copypastas[k][1], copypastas[k][2])
+                event.msg.reply(copypastas[k][0], event.msg.nonce, event.msg.tts, None, copypasta[k][1])
         else:
             event.msg.reply("Não há copypastas salvos.")
         
     @Plugin.command('name','<name:str...>')
     def on_name_command(self, event, name):
-        msg = event.msg.reply('Procurando...')
+        self.client.api.channels_typing(event.msg.channel_id)
         result = requests.get('https://br.api.pvp.net/api/lol/br/v1.4/summoner/by-name/' + name + '?api_key=' + riotApiKey)
-        msg.edit('```\n'+ujson.dumps(ujson.loads(result.text), indent=4, ensure_ascii=False)+'\n```')
+        event.msg.reply('```\n'+ujson.dumps(ujson.loads(result.text), indent=4, ensure_ascii=False)+'\n```')
 
     @Plugin.command('spam', '<count:int> <content:str...>')
     def on_spam_command(self, event, count, content):
         if str(event.msg.author.id) in ownerid:
             for i in range(count):
+                self.client.api.channels_typing(event.msg.channel_id)
                 event.msg.reply(content)
         else:
             event.msg.reply('Você não pode usar esse comando.')
@@ -256,6 +270,7 @@ class MyPlugin(Plugin):
         if str(event.msg.author.id) in ownerid:
             msgs = []
             for i in range(count):
+                self.client.api.channels_typing(event.msg.channel_id)
                 msgs.append(event.msg.reply(content))
             time.sleep(timesf)
             for m in msgs:
@@ -267,6 +282,7 @@ class MyPlugin(Plugin):
     def on_spamc_command(self, event, cid, count, content):
         if str(event.msg.author.id) in ownerid:
             for i in range(count):
+                self.client.api.channels_typing(cid)
                 self.client.api.channels_messages_create(cid, content)
         else:
             event.msg.reply('Você não pode usar esse comando.')
@@ -276,6 +292,7 @@ class MyPlugin(Plugin):
         if str(event.msg.author.id) in ownerid:
             msgs = []
             for i in range(count):
+                self.client.api.channels_typing(cid)
                 msgs.append(self.client.api.channels_messages_create(cid, content))
             time.sleep(timesf)
             for m in msgs:
@@ -286,6 +303,10 @@ class MyPlugin(Plugin):
     @Plugin.command('saychannel', '<cid:int> <content:str...>')
     def on_saychannel_command(self, event, cid, content):
         self.client.api.channels_messages_create(cid, content)
+
+    @Plugin.command('faketype', '<cid:int>')
+    def on_faketype_command(self, event, cid):
+        self.client.api.channels_typing(cid)
     
     @Plugin.command('info', '<query:str...>')
     def on_info(self, event, query):
