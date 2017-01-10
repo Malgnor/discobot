@@ -1,4 +1,5 @@
 ﻿from disco.bot import Bot, Plugin
+from disco.types.user import Status, Game
 from configparser import RawConfigParser
 import sys
 import requests
@@ -82,6 +83,14 @@ class MyPlugin(Plugin):
     def on_message_create(self, event):
         if copyCatId == event.author.id:
             self.client.api.channels_messages_create(event.channel_id, event.content)
+        
+    @Plugin.command('updatePresence', '<status:str> [game:str...]')
+    def on_updatepresence_command(self, event, status, game=None):
+        if str(event.msg.author.id) in ownerid:
+            if not Status[status]:
+                status = 'ONLINE'
+            self.client.update_presence(Game(name=game), Status[status])
+            event.msg.reply('Atualizando status...')
         
     @Plugin.command('setCopyCat', '[target:int]')
     def on_setcopycat_command(self, event, target=None):
