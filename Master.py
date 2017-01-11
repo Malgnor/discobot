@@ -82,38 +82,6 @@ class Master(Plugin, PluginBase):
         result = requests.get('https://br.api.pvp.net/api/lol/br/v1.4/summoner/by-name/{}'.format(name), params={'api_key':self.config['apikey']})
         event.msg.reply('```\n'+json.dumps(json.loads(result.text), indent=4, ensure_ascii=False)+'\n```')
 
-    @Plugin.command('spam', '<count:int> <content:str...>', level=100)
-    def on_spam_command(self, event, count, content):
-        for i in range(count):
-            self.client.api.channels_typing(event.msg.channel_id)
-            event.msg.reply(content)
-
-    @Plugin.command('spamsf', '<count:int> <timesf:int> <content:str...>', level=100)
-    def on_spamsf_command(self, event, count, timesf, content):
-        msgs = []
-        for i in range(count):
-            self.client.api.channels_typing(event.msg.channel_id)
-            msgs.append(event.msg.reply(content))
-        time.sleep(timesf)
-        for m in msgs:
-            m.delete()
-
-    @Plugin.command('spamc', '<cid:snowflake> <count:int> <content:str...>', level=100)
-    def on_spamc_command(self, event, cid, count, content):
-        for i in range(count):
-            self.client.api.channels_typing(cid)
-            self.client.api.channels_messages_create(cid, content)
-
-    @Plugin.command('spamcsf', '<cid:snowflake> <count:int> <timesf:int> <content:str...>', level=100)
-    def on_spamcsf_command(self, event, cid, count, timesf, content):
-        msgs = []
-        for i in range(count):
-            self.client.api.channels_typing(cid)
-            msgs.append(self.client.api.channels_messages_create(cid, content))
-        time.sleep(timesf)
-        for m in msgs:
-            m.delete()
-
     @Plugin.command('saychannel', '<cid:snowflake> <content:str...>', level=50)
     def on_saychannel_command(self, event, cid, content):
         self.client.api.channels_messages_create(cid, content)

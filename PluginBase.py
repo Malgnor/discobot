@@ -77,7 +77,7 @@ class PluginBase():
     @Plugin.command('config', '[plugin:str]', level=100)
     def on_config_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
-            event.msg.reply('```{}```'.format(json.dumps(self.config, indent=4)))
+            event.msg.reply('{}:```{}```'.format(self.name: json.dumps(self.config, indent=4)))
         
     @Plugin.command('configSave', '[plugin:str]', level=500)
     def on_configSave_command(self, event, plugin=None):

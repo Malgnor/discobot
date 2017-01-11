@@ -66,14 +66,14 @@ class CopyPasta(Plugin, PluginBase):
     def on_copypasta_command(self, event, copypasta=None):
         if copypasta:
             if copypasta in copypastas:
-                event.msg.reply(copypastas[copypasta][0], event.msg.nonce, event.msg.tts, None, copypastas[copypasta][1])
+                event.msg.reply(copypastas[copypasta][0], embed=copypastas[copypasta][1])
             else:
                 event.msg.reply('"' + copypasta + '" não encontrado.')
         else:
             keys = copypastas.keys()
             if len(keys):
                 k = keys[random.randrange(len(keys))]
-                event.msg.reply(copypastas[k][0], event.msg.nonce, event.msg.tts, None, copypastas[k][1])
+                event.msg.reply(copypastas[k][0], embed=copypastas[k][1])
             else:
                 event.msg.reply("Não há copypastas salvos.")
 
@@ -83,7 +83,7 @@ class CopyPasta(Plugin, PluginBase):
         if len(keys):
             for i in range(quantity):
                 k = keys[random.randrange(len(keys))]
-                event.msg.reply(copypastas[k][0], event.msg.nonce, event.msg.tts, None, copypastas[k][1])
+                event.msg.reply(copypastas[k][0], embed=copypastas[k][1])
         else:
             event.msg.reply("Não há copypastas salvos.")
 
@@ -104,6 +104,6 @@ class CopyPasta(Plugin, PluginBase):
         keys = copypastas.keys()
         if len(keys):
             for k in keys:
-                event.msg.reply(copypastas[k][0], event.msg.nonce, event.msg.tts, None, copypastas[k][1])
+                event.msg.reply(copypastas[k][0], embed=copypastas[k][1])
         else:
             event.msg.reply("Não há copypastas salvos.")
