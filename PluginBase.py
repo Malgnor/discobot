@@ -92,30 +92,30 @@ class PluginBase():
             self.config = self.loadConfig()
             event.msg.reply('Reloaded config for: {}'.format(self.name))
         
-    @Plugin.command('commands', '[plugin:str]', level=0, aliases=['command', 'help'], description='Mostra a lista de comandos disponíveis para você.', hide=True)
+    @Plugin.command('commands', '[plugin:str]', level=0, aliases=['command', 'help', 'ajuda', 'comandos'], description='Mostra a lista de comandos disponíveis para você.', hide=True)
     def on_commands_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             r = '{}```'.format(self.name)
             count = 0
             level = self.bot.get_level(event.msg.author if not event.msg.guild else event.msg.guild.get_member(event.msg.author))
             for c in self.commands:
-                if ((c.level and level >= c.level) or not c.level) and ((c.metadata and not c.metadata['hide']) or not c.metadata):
+                if ((c.level and level >= c.level) or not c.level) and not ('hide' in c.metadata and c.metadata['hide']):
                     count += 1
                     r += '\n'
                     ci = []
                     ci.append('{}'.format(c.triggers[0]))
-                    if c.triggers[1:]:
-                        ci.append('Aliases: {}'.format(' '.join(c.triggers[1:])))
                     if c.args.length:
                         aa = []
                         for a in c.args.args:
                             aa.append('{}{}:{}{}'.format('' if a.required else '[', a.name, '|'.join(a.types), '' if a.required else ']'))
                         ci.append('{}'.format(' '.join(aa)))
-                    if c.metadata and c.metadata['description']:
+                    if 'description' in c.metadata:
                         ci.append('\n\tDescription: {}'.format(c.metadata['description']))
                     ci.append('\n\tLevel: {}'.format(CommandLevels[c.level]))
                     if c.group:
                         ci.append('\tGroup: {}'.format(c.group))
+                    if c.triggers[1:]:
+                        ci.append('\tAliases: {}'.format(', '.join(c.triggers[1:])))
                         
                     r += ' '.join(ci)
             r += '```'

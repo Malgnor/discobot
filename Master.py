@@ -6,7 +6,6 @@ class Master(Plugin, PluginBase):
         config = {}
         config['channelLogId'] = 1
         config['channelDMId'] = 1
-        config['apikey'] = ''
         config['copyCatId'] = []
         return config
 
@@ -75,12 +74,6 @@ class Master(Plugin, PluginBase):
         event.msg.reply('Bye!')
         self.log.info('Calling quit().')
         quit()
-        
-    @Plugin.command('name','<name:str...>', level=10)
-    def on_name_command(self, event, name):
-        self.client.api.channels_typing(event.msg.channel_id)
-        result = requests.get('https://br.api.pvp.net/api/lol/br/v1.4/summoner/by-name/{}'.format(name), params={'api_key':self.config['apikey']})
-        event.msg.reply('```\n'+json.dumps(json.loads(result.text), indent=4, ensure_ascii=False)+'\n```')
 
     @Plugin.command('saychannel', '<cid:snowflake> <content:str...>', level=50)
     def on_saychannel_command(self, event, cid, content):
