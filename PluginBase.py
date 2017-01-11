@@ -1,66 +1,77 @@
 ﻿from disco.bot import Bot, Plugin
 from disco.types.user import Status, Game
 from disco.types.message import MessageEmbed, MessageEmbedImage
-from disco.bot.command import CommandLevels
-from configparser import RawConfigParser
 import disco
-import sys
 import requests
 import ujson as json
 import os
 import random
 import time
 
-global riotApiKey, ownerid, commandsText, ownerCommandsText, autosave, channelLogId, copyCatId
+import ruamel.yaml
+import warnings
+warnings.simplefilter('ignore', ruamel.yaml.error.UnsafeLoaderWarning)
 
-reload(sys)
-sys.setdefaultencoding('utf8')
-
-def getConfig():
-    global riotApiKey, ownerid, autosave, channelLogId
-    config = RawConfigParser()
-    try:
-        config.read('config.cfg')
-        ownerid = config.get('plugin', 'ownerid').split(',')
-        autosave = bool(int(config.get('plugin', 'autosave')))
-        channelLogId = int(config.get('plugin', 'channelLogId'))
-        riotApiKey = config.get('riotapi', 'apikey')
-    except(RawConfigParser.NoSectionError, RawConfigParser.NoOptionError):
-        quit('The "config.cfg" file is missing or corrupt!')
+class PluginBase():
+    def saveConfig(self):
+        if not self.config:
+            self.log.info('There is no configuration to save.')
+            return
         
-def createConfigFile():
-    with open('config.cfg', 'w') as cfg:
-        cfg.write('[plugin]\nownerid = 000000000000000,1111111111\nautosave = 1\nchannelLogId = 0000000000000000\n\n[riotapi]\napikey = **************')
+        name = self.name
+        if name.endswith('plugin'):
+            name = name[:-6]
 
-def getCommandsText():
-    if not os.path.isfile('commands.txt'):
-        return 'commands.txt não encontrado.'
-    with open('commands.txt', 'r') as file:
-        commands = file.read()
-    return commands
+        path = os.path.join(
+            self.bot.config.plugin_config_dir, name) + '.' + self.bot.config.plugin_config_format
 
-def getOwnerCommandsText():
-    if not os.path.isfile('ownercommands.txt'):
-        return 'ownercommands.txt não encontrado.'
-    with open('ownercommands.txt', 'r') as file:
-        commands = file.read()
-    return commands
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
         
-if not os.path.isfile('config.cfg'):
-    createConfigFile()
+        with open(path, 'w') as file:
+            file.write(ruamel.yaml.dump(self.config))
+        self.log.info('{} saved.'.format(path))
+        
+    def loadConfig(self):
+        self.log.info('Reloading config for plugin: {}'.format(self.name))
+        
+        name = self.name
+        if name.endswith('plugin'):
+            name = name[:-6]
 
-getConfig()
-commandsText = getCommandsText()
-ownerCommandsText = getOwnerCommandsText()
-copyCatId = None
+        path = os.path.join(
+            self.bot.config.plugin_config_dir, name) + '.' + self.bot.config.plugin_config_format
+        
+        if not os.path.exists(path):
+            if hasattr(self, 'config_cls'):
+                return self.config_cls()
+            return
+        
+        with open(path, 'r') as file:
+            data = ruamel.yaml.load(file.read())
 
-class PluginBase():        
-    @Plugin.command('plugin')
-    def on_plugin_command(self, event):
+        if hasattr(self, 'config_cls'):
+            inst = self.config_cls()
+            inst.update(data)
+            return inst
+
+        return data
+        
+    @Plugin.command('plugins')
+    def on_plugins_command(self, event):
         event.msg.reply(self.name)
         
-    @Plugin.command('reload', '<plugin:str>')
-    def on_reload_command(self, event, plugin):
-        if plugin == self.name:
-            self.log.info('Reloading plugin: {}'.format(self.name))
-            self.reload()
+    @Plugin.command('config', '[plugin:str]')
+    def on_config_command(self, event, plugin=None):
+        if (plugin and plugin == self.name) or not plugin:
+            event.msg.reply('```{}```'.format(json.dumps(self.config, indent=4)))
+        
+    @Plugin.command('configSave', '[plugin:str]')
+    def on_configSave_command(self, event, plugin=None):
+        if (plugin and plugin == self.name) or not plugin:
+            self.saveConfig()
+        
+    @Plugin.command('configReload', '[plugin:str]')
+    def on_configReload_command(self, event, plugin=None):
+        if (plugin and plugin == self.name) or not plugin:
+            self.config = self.loadConfig()

@@ -1,23 +1,32 @@
 ﻿from PluginBase import *
 
 class Master(Plugin, PluginBase):
+    @staticmethod
+    def config_cls():
+        config = {}
+        config['ownersid'] = []
+        config['channelLogId'] = 1
+        config['apikey'] = ''
+        config['copyCatId'] = []
+        return config
+
     @Plugin.listen('Ready')
     def on_ready(self, event):
-        self.client.api.channels_messages_create(channelLogId, 'I am ready!\nDisco-py: {}'.format(disco.VERSION))
+        self.client.api.channels_messages_create(self.config['channelLogId'], 'I am ready!\nDisco-py: {}'.format(disco.VERSION))
 
     @Plugin.listen('GuildCreate')
     def on_guild_create(self, event):
         if event.created:
-            self.client.api.channels_messages_create(channelLogId, 'Entrei no servidor: {}'.format(event.name))
+            self.client.api.channels_messages_create(self.config['channelLogId'], 'Entrei no servidor: {}'.format(event.name))
 
     @Plugin.listen('GuildDelete')
     def on_guild_delete(self, event):
         if event.deleted:
-            self.client.api.channels_messages_create(channelLogId, 'Saindo do servidor: {}'.format(event.id))
+            self.client.api.channels_messages_create(self.config['channelLogId'], 'Saindo do servidor: {}'.format(event.id))
 
     @Plugin.listen('MessageCreate')
-    def on_message_create(self, event):        
-        if copyCatId == event.author.id:
+    def on_message_create(self, event):
+        if event.author.id in self.config['copyCatId']:
             e = None
             if len(event.attachments):
                 for k in event.attachments.keys():
@@ -28,12 +37,12 @@ class Master(Plugin, PluginBase):
 
     @Plugin.listen('TypingStart')
     def on_typing_start(self, event):
-        if copyCatId == event.user_id:
+        if event.user_id in self.config['copyCatId']:
             self.client.api.channels_typing(event.channel_id)
         
     @Plugin.command('updatePresence', '<status:str> [game:str...]')
     def on_updatepresence_command(self, event, status, game=None):
-        if str(event.msg.author.id) in ownerid:
+        if event.msg.author.id in self.config['ownersid']:
             if not Status[status]:
                 status = 'ONLINE'
             self.client.update_presence(Game(name=game), Status[status])
@@ -43,58 +52,46 @@ class Master(Plugin, PluginBase):
         
     @Plugin.command('setCopyCat', '[target:int]')
     def on_setcopycat_command(self, event, target=None):
-        global copyCatId
-        if str(event.msg.author.id) in ownerid:
-            if target == 0:
+        if event.msg.author.id in self.config['ownersid']:
+            if not target:
+                r = '' if len(self.config['copyCatId']) else 'Não há alvos.'
+                
+                for t in self.config['copyCatId']:
+                    r += '<@{}>\n'.format(t)
+                    
+                event.msg.reply(r)
+                return
+                
+            if target == 1:
                 target = event.msg.author.id
-            copyCatId = target
-            event.msg.reply('{} setado como alvo.'.format(copyCatId))
+                
+            if target in self.config['copyCatId']:
+                self.config['copyCatId'].remove(target)
+                event.msg.reply('<@{}> removido como alvo.'.format(target))
+            else:
+                self.config['copyCatId'].append(target)
+                event.msg.reply('<@{}> adicionado como alvo.'.format(target))
         else:
             event.msg.reply('Você não pode usar esse comando.')
         
-    @Plugin.command('comandos')
-    def on_commandshelp_command(self, event):
-        event.msg.reply(commandsText)
-        if str(event.msg.author.id) in ownerid:
-            event.msg.reply(ownerCommandsText)
-        
     @Plugin.command('quit')
     def on_quit_command(self, event):
-        if str(event.msg.author.id) in ownerid:
+        if event.msg.author.id in self.config['ownersid']:
             event.msg.reply('Bye!')
             self.log.info('Calling quit().')
             quit()
         else:
             event.msg.reply('Você não pode usar esse comando.')
         
-    @Plugin.command('reloadconfig')
-    def on_reloadconfig_command(self, event):
-        if str(event.msg.author.id) in ownerid:
-            msg = event.msg.reply('Reloading config...')
-            getConfig()
-            msg.edit('Config reloaded!')
-        else:
-            event.msg.reply('Você não pode usar esse comando.')
-        
-    @Plugin.command('reloadcommandstext')
-    def on_reloadcommandstext_command(self, event):
-        if str(event.msg.author.id) in ownerid:
-            msg = event.msg.reply('Reloading commands text...')
-            commandsText = getCommandsText()
-            ownerCommandsText = getOwnerCommandsText()
-            msg.edit('Config reloaded!')
-        else:
-            event.msg.reply('Você não pode usar esse comando.')
-        
     @Plugin.command('name','<name:str...>')
     def on_name_command(self, event, name):
         self.client.api.channels_typing(event.msg.channel_id)
-        result = requests.get('https://br.api.pvp.net/api/lol/br/v1.4/summoner/by-name/' + name + '?api_key=' + riotApiKey)
+        result = requests.get('https://br.api.pvp.net/api/lol/br/v1.4/summoner/by-name/{}'.format(name), params={'api_key':self.config['apikey']})
         event.msg.reply('```\n'+json.dumps(json.loads(result.text), indent=4, ensure_ascii=False)+'\n```')
 
     @Plugin.command('spam', '<count:int> <content:str...>')
     def on_spam_command(self, event, count, content):
-        if str(event.msg.author.id) in ownerid:
+        if event.msg.author.id in self.config['ownersid']:
             for i in range(count):
                 self.client.api.channels_typing(event.msg.channel_id)
                 event.msg.reply(content)
@@ -103,7 +100,7 @@ class Master(Plugin, PluginBase):
 
     @Plugin.command('spamsf', '<count:int> <timesf:int> <content:str...>')
     def on_spamsf_command(self, event, count, timesf, content):
-        if str(event.msg.author.id) in ownerid:
+        if event.msg.author.id in self.config['ownersid']:
             msgs = []
             for i in range(count):
                 self.client.api.channels_typing(event.msg.channel_id)
@@ -116,7 +113,7 @@ class Master(Plugin, PluginBase):
 
     @Plugin.command('spamc', '<cid:int> <count:int> <content:str...>')
     def on_spamc_command(self, event, cid, count, content):
-        if str(event.msg.author.id) in ownerid:
+        if event.msg.author.id in self.config['ownersid']:
             for i in range(count):
                 self.client.api.channels_typing(cid)
                 self.client.api.channels_messages_create(cid, content)
@@ -125,7 +122,7 @@ class Master(Plugin, PluginBase):
 
     @Plugin.command('spamcsf', '<cid:int> <count:int> <timesf:int> <content:str...>')
     def on_spamcsf_command(self, event, cid, count, timesf, content):
-        if str(event.msg.author.id) in ownerid:
+        if event.msg.author.id in self.config['ownersid']:
             msgs = []
             for i in range(count):
                 self.client.api.channels_typing(cid)

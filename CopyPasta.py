@@ -14,7 +14,13 @@ def saveCopyPastas(copypastas):
         
 copypastas = getCopyPastas()
 
-class CopyPasta(Plugin, PluginBase):        
+class CopyPasta(Plugin, PluginBase):
+    @staticmethod
+    def config_cls():
+        config = {}
+        config['autosave'] = True
+        return config
+            
     @Plugin.command('copypastaAdd', '<name:str> <copypasta:str...>')
     def on_copypastaAdd_command(self, event, name, copypasta):
         if name in copypastas:
@@ -28,7 +34,7 @@ class CopyPasta(Plugin, PluginBase):
                     break
             copypastas[name] = [copypasta, e]
             event.msg.reply('"' + name + '" adicionado.')
-            if autosave:
+            if self.config['autosave']:
                 saveCopyPastas(copypastas)
         
     @Plugin.command('copypastaMod', '<name:str> <copypasta:str...>')
@@ -44,7 +50,7 @@ class CopyPasta(Plugin, PluginBase):
                     break
             copypastas[name] = [copypasta, e]
             event.msg.reply('"' + name + '" modificado.')
-            if autosave:
+            if self.config['autosave']:
                 saveCopyPastas(copypastas)
         
     @Plugin.command('copypastaDel', '<name:str>')
@@ -54,7 +60,7 @@ class CopyPasta(Plugin, PluginBase):
         else:
             del copypastas[name]
             event.msg.reply('"' + name + '" apagado.')
-            if autosave:
+            if self.config['autosave']:
                 saveCopyPastas(copypastas)
         
     @Plugin.command('copypastaRename', '<oldname:str> <newname:str>')
@@ -65,7 +71,7 @@ class CopyPasta(Plugin, PluginBase):
             copypastas[newname] = copypastas[oldname]
             del copypastas[oldname]
             event.msg.reply('"' + oldname + '" renomeado para "'+ newname + '".')
-            if autosave:
+            if self.config['autosave']:
                 saveCopyPastas(copypastas)
 
     @Plugin.command('copypasta', '[copypasta:str]')
@@ -110,6 +116,6 @@ class CopyPasta(Plugin, PluginBase):
         keys = copypastas.keys()
         if len(keys):
             for k in keys:
-                event.msg.reply(copypastas[k][0], event.msg.nonce, event.msg.tts, None, copypasta[k][1])
+                event.msg.reply(copypastas[k][0], event.msg.nonce, event.msg.tts, None, copypastas[k][1])
         else:
             event.msg.reply("Não há copypastas salvos.")
