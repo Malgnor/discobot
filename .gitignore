@@ -92,3 +92,4 @@ ENV/
 *.cfg
 *.json
 config/
+myConfig.yaml
