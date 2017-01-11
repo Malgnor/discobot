@@ -16,6 +16,15 @@ warnings.simplefilter('ignore', ruamel.yaml.error.UnsafeLoaderWarning)
 reload(sys)
 sys.setdefaultencoding('utf8')
 
+def AttachmentToEmbed(attachments):
+    embed = None
+    if len(attachments):
+        for k in attachments.keys():
+            embed = MessageEmbed(title = attachments[k].filename, url = attachments[k].url)
+            embed.image = MessageEmbedImage(url = attachments[k].url, proxy_url = attachments[k].proxy_url, width = attachments[k].width, height = attachments[k].height) if attachments[k].width else None
+            break
+    return embed
+
 class PluginBase():
     def saveConfig(self):
         if not self.config:
@@ -61,21 +70,23 @@ class PluginBase():
 
         return data
         
-    @Plugin.command('plugins')
+    @Plugin.command('plugins', level=10)
     def on_plugins_command(self, event):
         event.msg.reply(self.name)
         
-    @Plugin.command('config', '[plugin:str]')
+    @Plugin.command('config', '[plugin:str]', level=100)
     def on_config_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             event.msg.reply('```{}```'.format(json.dumps(self.config, indent=4)))
         
-    @Plugin.command('configSave', '[plugin:str]')
+    @Plugin.command('configSave', '[plugin:str]', level=500)
     def on_configSave_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             self.saveConfig()
+            event.msg.reply('Saved config for: {}'.format(self.name))
         
-    @Plugin.command('configReload', '[plugin:str]')
+    @Plugin.command('configReload', '[plugin:str]', level=500)
     def on_configReload_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             self.config = self.loadConfig()
+            event.msg.reply('Reloaded config for: {}'.format(self.name))

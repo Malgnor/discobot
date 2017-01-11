@@ -21,39 +21,27 @@ class CopyPasta(Plugin, PluginBase):
         config['autosave'] = True
         return config
             
-    @Plugin.command('copypastaAdd', '<name:str> <copypasta:str...>')
+    @Plugin.command('copypastaAdd', '<name:str> <copypasta:str...>', level=10)
     def on_copypastaAdd_command(self, event, name, copypasta):
         if name in copypastas:
             event.msg.reply('"' + name + '" já existente.\nUse "copypastaMod" para modificar um copypasta existente.')
         else:
-            e = None
-            if len(event.msg.attachments):
-                for k in event.msg.attachments.keys():
-                    e = MessageEmbed(title = event.msg.attachments[k].filename, url = event.msg.attachments[k].url)
-                    e.image = MessageEmbedImage(url = event.msg.attachments[k].url, proxy_url = event.msg.attachments[k].proxy_url, width = event.msg.attachments[k].width, height = event.msg.attachments[k].height) if event.msg.attachments[k].width else None
-                    break
-            copypastas[name] = [copypasta, e]
+            copypastas[name] = [copypasta, AttachmentToEmbed(event.msg.attachments)]
             event.msg.reply('"' + name + '" adicionado.')
             if self.config['autosave']:
                 saveCopyPastas(copypastas)
         
-    @Plugin.command('copypastaMod', '<name:str> <copypasta:str...>')
+    @Plugin.command('copypastaMod', '<name:str> <copypasta:str...>', level=10)
     def on_copypastaMod_command(self, event, name, copypasta):
         if not name in copypastas:
             event.msg.reply('"' + name + '" inexistente.\nUse "copypastaAdd" para adicionar um novo copypasta.')
         else:
-            e = None
-            if len(event.msg.attachments):
-                for k in event.msg.attachments.keys():
-                    e = MessageEmbed(title = event.msg.attachments[k].filename, url = event.msg.attachments[k].url)
-                    e.image = MessageEmbedImage(url = event.msg.attachments[k].url, proxy_url = event.msg.attachments[k].proxy_url, width = event.msg.attachments[k].width, height = event.msg.attachments[k].height) if event.msg.attachments[k].width else None
-                    break
-            copypastas[name] = [copypasta, e]
+            copypastas[name] = [copypasta, AttachmentToEmbed(event.msg.attachments)]
             event.msg.reply('"' + name + '" modificado.')
             if self.config['autosave']:
                 saveCopyPastas(copypastas)
         
-    @Plugin.command('copypastaDel', '<name:str>')
+    @Plugin.command('copypastaDel', '<name:str>', level=10)
     def on_copypastaDel_command(self, event, name):
         if not name in copypastas:
             event.msg.reply('"' + name + '" inexistente.')
@@ -63,7 +51,7 @@ class CopyPasta(Plugin, PluginBase):
             if self.config['autosave']:
                 saveCopyPastas(copypastas)
         
-    @Plugin.command('copypastaRename', '<oldname:str> <newname:str>')
+    @Plugin.command('copypastaRename', '<oldname:str> <newname:str>', level=10)
     def on_copypastaRename_command(self, event, oldname, newname):
         if not oldname in copypastas:
             event.msg.reply('"' + oldname + '" inexistente.')
@@ -74,7 +62,7 @@ class CopyPasta(Plugin, PluginBase):
             if self.config['autosave']:
                 saveCopyPastas(copypastas)
 
-    @Plugin.command('copypasta', '[copypasta:str]')
+    @Plugin.command('copypasta', '[copypasta:str]', level=10)
     def on_copypasta_command(self, event, copypasta=None):
         if copypasta:
             if copypasta in copypastas:
@@ -89,7 +77,7 @@ class CopyPasta(Plugin, PluginBase):
             else:
                 event.msg.reply("Não há copypastas salvos.")
 
-    @Plugin.command('copypastaSpam', '<quantity:int>')
+    @Plugin.command('copypastaSpam', '<quantity:int>', level=50)
     def on_copypastaSpam_command(self, event, quantity):
         keys = copypastas.keys()
         if len(keys):
@@ -99,7 +87,7 @@ class CopyPasta(Plugin, PluginBase):
         else:
             event.msg.reply("Não há copypastas salvos.")
 
-    @Plugin.command('copypastaList')
+    @Plugin.command('copypastaList', level=10)
     def on_copypastaList_command(self, event):
         keys = copypastas.keys()
         if len(keys):
@@ -111,7 +99,7 @@ class CopyPasta(Plugin, PluginBase):
         else:
             event.msg.reply("Não há copypastas salvos.")
 
-    @Plugin.command('copypastaAll')
+    @Plugin.command('copypastaAll', level=50)
     def on_copypastaAll_command(self, event):
         keys = copypastas.keys()
         if len(keys):
