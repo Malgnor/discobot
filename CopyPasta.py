@@ -1,25 +1,20 @@
-﻿from BasePlugin import BasePlugin
-from disco.bot import Bot, Plugin
-import ujson
-import os
-import random
+﻿from PluginBase import *
 
 def getCopyPastas():
     if not os.path.isfile('copypastas.json'):
         print 'copypastas.json não encontrado.'
         return {}
     with open('copypastas.json', 'r') as file:
-        copypastas = ujson.load(file)
+        copypastas = json.load(file)
     return copypastas
     
 def saveCopyPastas(copypastas):
     with open('copypastas.json', 'w') as file:
-        file.write(ujson.dumps(copypastas, indent=4, ensure_ascii=False))
+        file.write(json.dumps(copypastas, indent=4, ensure_ascii=False))
         
 copypastas = getCopyPastas()
-autosave = True
 
-class CopyPastaPlugin(Plugin, BasePlugin):        
+class CopyPasta(Plugin, PluginBase):        
     @Plugin.command('copypastaAdd', '<name:str> <copypasta:str...>')
     def on_copypastaAdd_command(self, event, name, copypasta):
         if name in copypastas:

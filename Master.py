@@ -1,60 +1,6 @@
-﻿import disco
-from BasePlugin import BasePlugin
-from disco.bot import Bot, Plugin
-from disco.types.user import Status, Game
-from disco.types.message import MessageEmbed, MessageEmbedImage
-from configparser import RawConfigParser
-import sys
-import requests
-import ujson
-import os
-import random
-import time
+﻿from PluginBase import *
 
-global riotApiKey, ownerid, commandsText, ownerCommandsText, autosave, channelLogId, copyCatId
-
-reload(sys)
-sys.setdefaultencoding('utf8')
-
-def getConfig():
-    global riotApiKey, ownerid, autosave, channelLogId
-    config = RawConfigParser()
-    try:
-        config.read('config.cfg')
-        ownerid = config.get('plugin', 'ownerid').split(',')
-        autosave = bool(int(config.get('plugin', 'autosave')))
-        channelLogId = int(config.get('plugin', 'channelLogId'))
-        riotApiKey = config.get('riotapi', 'apikey')
-    except(RawConfigParser.NoSectionError, RawConfigParser.NoOptionError):
-        quit('The "config.cfg" file is missing or corrupt!')
-        
-def createConfigFile():
-    with open('config.cfg', 'w') as cfg:
-        cfg.write('[plugin]\nownerid = 000000000000000,1111111111\nautosave = 1\nchannelLogId = 0000000000000000\n\n[riotapi]\napikey = **************')
-
-def getCommandsText():
-    if not os.path.isfile('commands.txt'):
-        return 'commands.txt não encontrado.'
-    with open('commands.txt', 'r') as file:
-        commands = file.read()
-    return commands
-
-def getOwnerCommandsText():
-    if not os.path.isfile('ownercommands.txt'):
-        return 'ownercommands.txt não encontrado.'
-    with open('ownercommands.txt', 'r') as file:
-        commands = file.read()
-    return commands
-        
-if not os.path.isfile('config.cfg'):
-    createConfigFile()
-
-getConfig()
-commandsText = getCommandsText()
-ownerCommandsText = getOwnerCommandsText()
-copyCatId = None   
-
-class MyPlugin(Plugin, BasePlugin):
+class Master(Plugin, PluginBase):
     @Plugin.listen('Ready')
     def on_ready(self, event):
         self.client.api.channels_messages_create(channelLogId, 'I am ready!\nDisco-py: {}'.format(disco.VERSION))
@@ -144,7 +90,7 @@ class MyPlugin(Plugin, BasePlugin):
     def on_name_command(self, event, name):
         self.client.api.channels_typing(event.msg.channel_id)
         result = requests.get('https://br.api.pvp.net/api/lol/br/v1.4/summoner/by-name/' + name + '?api_key=' + riotApiKey)
-        event.msg.reply('```\n'+ujson.dumps(ujson.loads(result.text), indent=4, ensure_ascii=False)+'\n```')
+        event.msg.reply('```\n'+json.dumps(json.loads(result.text), indent=4, ensure_ascii=False)+'\n```')
 
     @Plugin.command('spam', '<count:int> <content:str...>')
     def on_spam_command(self, event, count, content):
