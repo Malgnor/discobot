@@ -2,6 +2,7 @@
 from disco.types.user import Status, Game
 from disco.types.message import MessageEmbed, MessageEmbedImage
 import disco
+import sys
 import requests
 import ujson as json
 import os
@@ -11,6 +12,9 @@ import time
 import ruamel.yaml
 import warnings
 warnings.simplefilter('ignore', ruamel.yaml.error.UnsafeLoaderWarning)
+
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 class PluginBase():
     def saveConfig(self):

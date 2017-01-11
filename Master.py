@@ -50,7 +50,7 @@ class Master(Plugin, PluginBase):
         else:
             event.msg.reply('Você não pode usar esse comando.')
         
-    @Plugin.command('setCopyCat', '[target:int]')
+    @Plugin.command('setCopyCat', '[target:snowflake]')
     def on_setcopycat_command(self, event, target=None):
         if event.msg.author.id in self.config['ownersid']:
             if not target:
@@ -111,7 +111,7 @@ class Master(Plugin, PluginBase):
         else:
             event.msg.reply('Você não pode usar esse comando.')
 
-    @Plugin.command('spamc', '<cid:int> <count:int> <content:str...>')
+    @Plugin.command('spamc', '<cid:snowflake> <count:int> <content:str...>')
     def on_spamc_command(self, event, cid, count, content):
         if event.msg.author.id in self.config['ownersid']:
             for i in range(count):
@@ -120,7 +120,7 @@ class Master(Plugin, PluginBase):
         else:
             event.msg.reply('Você não pode usar esse comando.')
 
-    @Plugin.command('spamcsf', '<cid:int> <count:int> <timesf:int> <content:str...>')
+    @Plugin.command('spamcsf', '<cid:snowflake> <count:int> <timesf:int> <content:str...>')
     def on_spamcsf_command(self, event, cid, count, timesf, content):
         if event.msg.author.id in self.config['ownersid']:
             msgs = []
@@ -133,17 +133,23 @@ class Master(Plugin, PluginBase):
         else:
             event.msg.reply('Você não pode usar esse comando.')
 
-    @Plugin.command('saychannel', '<cid:int> <content:str...>')
+    @Plugin.command('saychannel', '<cid:snowflake> <content:str...>')
     def on_saychannel_command(self, event, cid, content):
         self.client.api.channels_messages_create(cid, content)
 
-    @Plugin.command('faketype', '<cid:int>')
+    @Plugin.command('faketype', '<cid:snowflake>')
     def on_faketype_command(self, event, cid):
         self.client.api.channels_typing(cid)
     
     @Plugin.command('info', '<query:str...>')
     def on_info(self, event, query):
-        users = list(self.state.users.select({'username': query}, {'id': query}))
+    
+        try:
+            uid = int(query)
+        except ValueError:
+            uid = query
+            
+        users = list(self.state.users.select({'username': query}, {'id': uid}))
 
         if not users:
             event.msg.reply("Couldn't find user for your query: `{}`".format(query))
@@ -165,10 +171,6 @@ class Master(Plugin, PluginBase):
                 parts.append('Nickname: {}'.format(member.nick))
                 parts.append('Joined At: {}'.format(member.joined_at))
                 
-            avatar_url = ''
-            if user.avatar:
-                avatar_url = '\nhttps://discordapp.com/api/users/{}/avatars/{}.jpg'.format(user.id, user.avatar)
-            
             event.msg.reply(('```\n{}\n```'.format(
                 '\n'.join(parts))
-            )+avatar_url)
+            )+(user.avatar_url or ''))
