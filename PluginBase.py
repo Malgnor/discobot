@@ -1,6 +1,7 @@
 ﻿from disco.bot import Bot, Plugin
 from disco.types.user import Status, Game
 from disco.types.message import MessageEmbed, MessageEmbedImage
+from disco.bot.command import CommandLevels
 import disco
 import sys
 import requests
@@ -70,23 +71,53 @@ class PluginBase():
 
         return data
         
-    @Plugin.command('plugins', level=10)
+    @Plugin.command('plugins', level=10, aliases=['plugin', 'pluginList', 'listPlugins', 'listPlugin'], hide=True)
     def on_plugins_command(self, event):
         event.msg.reply(self.name)
         
-    @Plugin.command('config', '[plugin:str]', level=100)
+    @Plugin.command('config', '[plugin:str]', level=100, hide=True)
     def on_config_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
-            event.msg.reply('{}:```{}```'.format(self.name: json.dumps(self.config, indent=4)))
+            event.msg.reply('{}:```{}```'.format(self.name, json.dumps(self.config, indent=4)))
         
-    @Plugin.command('configSave', '[plugin:str]', level=500)
+    @Plugin.command('configSave', '[plugin:str]', level=500, hide=True)
     def on_configSave_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             self.saveConfig()
             event.msg.reply('Saved config for: {}'.format(self.name))
         
-    @Plugin.command('configReload', '[plugin:str]', level=500)
+    @Plugin.command('configReload', '[plugin:str]', level=500, hide=True)
     def on_configReload_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             self.config = self.loadConfig()
             event.msg.reply('Reloaded config for: {}'.format(self.name))
+        
+    @Plugin.command('commands', '[plugin:str]', level=0, aliases=['command', 'help'], description='Mostra a lista de comandos disponíveis para você.', hide=True)
+    def on_commands_command(self, event, plugin=None):
+        if (plugin and plugin == self.name) or not plugin:
+            r = '{}```'.format(self.name)
+            count = 0
+            level = self.bot.get_level(event.msg.author if not event.msg.guild else event.msg.guild.get_member(event.msg.author))
+            for c in self.commands:
+                if ((c.level and level >= c.level) or not c.level) and ((c.metadata and not c.metadata['hide']) or not c.metadata):
+                    count += 1
+                    r += '\n'
+                    ci = []
+                    ci.append('{}'.format(c.triggers[0]))
+                    if c.triggers[1:]:
+                        ci.append('Aliases: {}'.format(' '.join(c.triggers[1:])))
+                    if c.args.length:
+                        aa = []
+                        for a in c.args.args:
+                            aa.append('{}{}:{}{}'.format('' if a.required else '[', a.name, '|'.join(a.types), '' if a.required else ']'))
+                        ci.append('{}'.format(' '.join(aa)))
+                    if c.metadata and c.metadata['description']:
+                        ci.append('\n\tDescription: {}'.format(c.metadata['description']))
+                    ci.append('\n\tLevel: {}'.format(CommandLevels[c.level]))
+                    if c.group:
+                        ci.append('\tGroup: {}'.format(c.group))
+                        
+                    r += ' '.join(ci)
+            r += '```'
+            if count:
+                event.msg.reply(r)
