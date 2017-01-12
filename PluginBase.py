@@ -82,18 +82,18 @@ class PluginBase():
     def on_plugins_command(self, event):
         event.msg.reply(self.name)
         
-    @Plugin.command('config', '[plugin:str]', level=100, hide=True)
+    @Plugin.command('view', '[plugin:str]', group='config', level=100, hide=True)
     def on_config_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             event.msg.reply('{}:```{}```'.format(self.name, json.dumps(self.config, indent=4)))
         
-    @Plugin.command('configSave', '[plugin:str]', level=500, hide=True)
+    @Plugin.command('save', '[plugin:str]', group='config', level=500, hide=True)
     def on_configSave_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             self.saveConfig()
             event.msg.reply('Saved config for: {}'.format(self.name))
         
-    @Plugin.command('configReload', '[plugin:str]', level=500, hide=True)
+    @Plugin.command('reload', '[plugin:str]', group='config', level=500, hide=True)
     def on_configReload_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             self.config = self.loadConfig()

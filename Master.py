@@ -125,6 +125,48 @@ class Master(Plugin, PluginBase):
     def on_group_command(self, event):
         event.msg.reply(json.dumps(self.bot.group_abbrev))
         
+        # groups = set(command.group for command in self.bot.commands if command.group)
+        
+        # event.msg.reply(json.dumps(groups))
+        
+        # abbrev = {}
+        
+        # for group in groups:
+            # for i in range(1, len(group)):
+                # if not group[:i] in abbrev.values():
+                    # abbrev[group] = group[:i]
+                    # break
+                # conflict = {k: k[:i+1] for k, v in abbrev.items() if v == group[:i]}
+                # abbrev.update(conflict)
+                
+        # self.bot.group_abbrev.update(abbrev)
+        # self.bot.compute_command_matches_re()
+        # event.msg.reply(json.dumps(self.bot.group_abbrev))
+            
+    # @Plugin.command('test', group='test', level=100)
+    # def on_test1_command(self, event):
+        # pass
+        
+    # @Plugin.command('tag', group='tag', level=100)
+    # def on_test2_command(self, event):
+        # pass
+            
+    # @Plugin.command('boots', group='boots', level=100)
+    # def on_test3_command(self, event):
+        # pass
+        
+    # @Plugin.command('boat', group='boat', level=100)
+    # def on_test4_command(self, event):
+        # pass
+            
+    # @Plugin.command('work', group='work', level=100)
+    # def on_test5_command(self, event):
+        # pass
+        
+    # @Plugin.command('word', group='word', level=100)
+    # def on_test6_command(self, event):
+        # pass
+        
     @Plugin.command('listRoles', level=100)
     def on_listroles_command(self, event):
         if not event.channel.guild:
