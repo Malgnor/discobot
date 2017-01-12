@@ -14,6 +14,9 @@ import ruamel.yaml
 import warnings
 warnings.simplefilter('ignore', ruamel.yaml.error.UnsafeLoaderWarning)
 
+reload(sys)
+sys.setdefaultencoding('utf8')
+
 def AttachmentToEmbed(attachments):
     embed = None
     if len(attachments):

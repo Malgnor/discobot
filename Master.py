@@ -94,14 +94,14 @@ class Master(Plugin, PluginBase):
             uid = int(user)
         except ValueError:
             uid = user
-        users = list(self.state.users.select({'username': user}, {'id': user}))
+        users = list(self.state.users.select({'username': user}, {'id': uid}))
 
         if not users:
             event.msg.reply("Couldn't find user for your query: `{}`".format(user))
         elif len(users) > 1:
             event.msg.reply('I found too many users ({}) for your query: `{}`'.format(len(users), user))
         else:
-            event.msg.reply('{}: {}'.format(users[0].username, CommandLevels[self.bot.get_level(users[0])]))
+            event.msg.reply('{}: {}'.format(users[0].username, CommandLevels[self.bot.get_level(users[0] if not event.msg.guild else event.msg.guild.get_member(users[0]))]))
     
     @Plugin.command('levelSet', '<userid:snowflake> <targetLevel:str>', level=500)
     def on_levelset_command(self, event, userid, targetLevel):
@@ -119,8 +119,19 @@ class Master(Plugin, PluginBase):
         with open(self.config['client_config_name'], 'w') as file:
             file.write(ruamel.yaml.dump(c))
             
-        event.msg.reply('<@{}> agora é {}.'.format(userid, targetLevel))
+        event.msg.reply('{} agora é {}.'.format(userid, targetLevel))
             
+    @Plugin.command('listRoles', level=100)
+    def on_listroles_command(self, event):
+        if not event.channel.guild:
+            event.msg.reply('Este canal não faz parte de um servidor.')
+            return
+            
+        m = ''
+        for role in event.channel.guild.roles.values():
+            m += '{}:{}\n'.format(role.name, role.id)
+        event.msg.reply(m)
+        
     @Plugin.command('info', '<query:str...>', level=10)
     def on_info_command(self, event, query):
     
