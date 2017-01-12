@@ -4,30 +4,34 @@ class Master(Plugin, PluginBase):
     @staticmethod
     def config_cls():
         config = {}
-        config['channelLogId'] = 1
-        config['channelDMId'] = 1
+        config['channelLogId'] = None
+        config['channelDMId'] = None
         config['copyCatId'] = []
+        config['client_config_name'] = 'config.yaml'
         return config
 
     @Plugin.listen('Ready')
     def on_ready(self, event):
-        self.client.api.channels_messages_create(self.config['channelLogId'], 'I am ready!\nDisco-py: {}'.format(disco.VERSION))
+        if self.config['channelLogId']:
+            self.client.api.channels_messages_create(self.config['channelLogId'], 'I am ready!\nDisco-py: {}'.format(disco.VERSION))
 
     @Plugin.listen('GuildCreate')
     def on_guild_create(self, event):
-        if event.created:
-            self.client.api.channels_messages_create(self.config['channelLogId'], 'Entrei no servidor: {}'.format(event.name))
+        if self.config['channelLogId']:
+            if event.created:
+                self.client.api.channels_messages_create(self.config['channelLogId'], 'Entrei no servidor: {}'.format(event.name))
 
     @Plugin.listen('GuildDelete')
     def on_guild_delete(self, event):
-        if event.deleted:
-            self.client.api.channels_messages_create(self.config['channelLogId'], 'Saindo do servidor: {}'.format(event.id))
+        if self.config['channelLogId']:
+            if event.deleted:
+                self.client.api.channels_messages_create(self.config['channelLogId'], 'Saindo do servidor: {}'.format(event.id))
 
     @Plugin.listen('MessageCreate')
     def on_message_create(self, event):
         if event.author == self.state.me:
             return
-        if event.channel.type == 1:
+        if event.channel.type == 1 and self.config['channelDMId']:
             self.client.api.channels_messages_create(self.config['channelDMId'], '[DM]{}: {}'.format(event.author.mention, event.content), event.nonce, event.tts, None, AttachmentToEmbed(event.attachments))
         if event.author.id in self.config['copyCatId']:
             self.client.api.channels_messages_create(event.channel_id, event.content, event.nonce, event.tts, None, AttachmentToEmbed(event.attachments))            
@@ -82,9 +86,43 @@ class Master(Plugin, PluginBase):
     @Plugin.command('faketype', '<cid:snowflake>', level=50)
     def on_faketype_command(self, event, cid):
         self.client.api.channels_typing(cid)
+
+    @Plugin.command('levelCheck', '[user:str...]')
+    def on_levelcheck_command(self, event, user=None):
+        user = user or event.msg.author.id
+        try:
+            uid = int(user)
+        except ValueError:
+            uid = user
+        users = list(self.state.users.select({'username': user}, {'id': user}))
+
+        if not users:
+            event.msg.reply("Couldn't find user for your query: `{}`".format(user))
+        elif len(users) > 1:
+            event.msg.reply('I found too many users ({}) for your query: `{}`'.format(len(users), user))
+        else:
+            event.msg.reply('{}: {}'.format(users[0].username, CommandLevels[self.bot.get_level(users[0])]))
     
+    @Plugin.command('levelSet', '<userid:snowflake> <targetLevel:str>', level=500)
+    def on_levelset_command(self, event, userid, targetLevel):
+        if not CommandLevels[targetLevel]:
+            event.msg.reply('{} é invalido.'.format(targetLevel))
+            return
+            
+        self.bot.config.levels[userid] = targetLevel
+        
+        with open(self.config['client_config_name'], 'r') as file:
+            c = ruamel.yaml.load(file.read())
+        
+        c['bot']['levels'][userid] = targetLevel
+        
+        with open(self.config['client_config_name'], 'w') as file:
+            file.write(ruamel.yaml.dump(c))
+            
+        event.msg.reply('<@{}> agora é {}.'.format(userid, targetLevel))
+            
     @Plugin.command('info', '<query:str...>', level=10)
-    def on_info(self, event, query):
+    def on_info_command(self, event, query):
     
         try:
             uid = int(query)

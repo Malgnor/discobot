@@ -14,9 +14,6 @@ import ruamel.yaml
 import warnings
 warnings.simplefilter('ignore', ruamel.yaml.error.UnsafeLoaderWarning)
 
-reload(sys)
-sys.setdefaultencoding('utf8')
-
 def AttachmentToEmbed(attachments):
     embed = None
     if len(attachments):
@@ -92,8 +89,8 @@ class PluginBase():
             self.config = self.loadConfig()
             event.msg.reply('Reloaded config for: {}'.format(self.name))
         
-    @Plugin.command('commands', '[plugin:str]', level=0, aliases=['command', 'help', 'ajuda', 'comandos'], description='Mostra a lista de comandos disponíveis para você.', hide=True)
-    def on_commands_command(self, event, plugin=None):
+    @Plugin.command('help', '[plugin:str]', description='Mostra a lista de comandos disponíveis para você.', hide=True)
+    def on_help_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             r = '{}```'.format(self.name)
             count = 0
