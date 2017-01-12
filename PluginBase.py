@@ -22,7 +22,7 @@ def AttachmentToEmbed(attachments):
     if len(attachments):
         for k in attachments.keys():
             embed = MessageEmbed(title = attachments[k].filename, url = attachments[k].url)
-            embed.image = MessageEmbedImage(url = attachments[k].url, proxy_url = attachments[k].proxy_url, width = attachments[k].width, height = attachments[k].height) if attachments[k].width else None
+            embed.set_image(url = attachments[k].url, proxy_url = attachments[k].proxy_url, width = attachments[k].width, height = attachments[k].height) if attachments[k].width else None
             break
     return embed
     
@@ -30,7 +30,7 @@ def EmbedImageFromUrl(iurl):
     if not iurl:
         return None
     embed = MessageEmbed(url = iurl)
-    embed.image = MessageEmbedImage(url = iurl)
+    embed.set_image(url = iurl)
     return embed
 
 class PluginBase():
@@ -99,7 +99,7 @@ class PluginBase():
             self.config = self.loadConfig()
             event.msg.reply('Reloaded config for: {}'.format(self.name))
         
-    @Plugin.command('help', '[plugin:str]', description='Mostra a lista de comandos disponíveis para você.', hide=True)
+    @Plugin.command('help', '[plugin:str]', aliases=['ajuda', 'command', 'commands'], description='Mostra a lista de comandos disponíveis para você.', hide=True)
     def on_help_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             r = '{}```'.format(self.name)
