@@ -87,7 +87,7 @@ class Master(Plugin, PluginBase):
     def on_faketype_command(self, event, cid):
         self.client.api.channels_typing(cid)
 
-    @Plugin.command('levelCheck', '[user:str...]')
+    @Plugin.command('check', '[user:str...]', group='level')
     def on_levelcheck_command(self, event, user=None):
         user = user or event.msg.author.id
         try:
@@ -103,7 +103,7 @@ class Master(Plugin, PluginBase):
         else:
             event.msg.reply('{}: {}'.format(users[0].username, CommandLevels[self.bot.get_level(users[0] if not event.msg.guild else event.msg.guild.get_member(users[0]))]))
     
-    @Plugin.command('levelSet', '<userid:snowflake> <targetLevel:str>', level=500)
+    @Plugin.command('set', '<userid:snowflake> <targetLevel:str>', group='level', level=500)
     def on_levelset_command(self, event, userid, targetLevel):
         if not CommandLevels[targetLevel]:
             event.msg.reply('{} é invalido.'.format(targetLevel))
@@ -121,6 +121,10 @@ class Master(Plugin, PluginBase):
             
         event.msg.reply('{} agora é {}.'.format(userid, targetLevel))
             
+    @Plugin.command('group', level=100)
+    def on_group_command(self, event):
+        event.msg.reply(json.dumps(self.bot.group_abbrev))
+        
     @Plugin.command('listRoles', level=100)
     def on_listroles_command(self, event):
         if not event.channel.guild:

@@ -110,19 +110,17 @@ class PluginBase():
                     count += 1
                     r += '\n'
                     ci = []
-                    ci.append('{}'.format(c.triggers[0]))
+                    if c.group:
+                        ci.append('{}'.format(c.group))
+                    ci.append('{}'.format('|'.join(c.triggers)))
                     if c.args.length:
                         aa = []
                         for a in c.args.args:
                             aa.append('{}{}:{}{}'.format('' if a.required else '[', a.name, '|'.join(a.types), '' if a.required else ']'))
                         ci.append('{}'.format(' '.join(aa)))
-                    if 'description' in c.metadata:
-                        ci.append('\n\tDescription: {}'.format(c.metadata['description']))
                     ci.append('\n\tLevel: {}'.format(CommandLevels[c.level]))
-                    if c.group:
-                        ci.append('\tGroup: {}'.format(c.group))
-                    if c.triggers[1:]:
-                        ci.append('\tAliases: {}'.format(', '.join(c.triggers[1:])))
+                    if 'description' in c.metadata:
+                        ci.append('\tDescription: {}'.format(c.metadata['description']))
                         
                     r += ' '.join(ci)
             r += '```'
