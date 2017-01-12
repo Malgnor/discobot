@@ -159,9 +159,10 @@ class Master(Plugin, PluginBase):
 
             if event.channel.guild:
                 member = event.channel.guild.get_member(user)
-                parts.append('Nickname: {}'.format(member.nick))
+                if member.nick:
+                    parts.append('Nickname: {}'.format(member.nick))
                 parts.append('Joined At: {}'.format(member.joined_at))
                 
             event.msg.reply(('```\n{}\n```'.format(
                 '\n'.join(parts))
-            )+(user.avatar_url or ''))
+            ), embed=EmbedImageFromUrl(user.avatar_url))

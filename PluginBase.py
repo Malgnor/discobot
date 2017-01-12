@@ -25,6 +25,13 @@ def AttachmentToEmbed(attachments):
             embed.image = MessageEmbedImage(url = attachments[k].url, proxy_url = attachments[k].proxy_url, width = attachments[k].width, height = attachments[k].height) if attachments[k].width else None
             break
     return embed
+    
+def EmbedImageFromUrl(iurl):
+    if not iurl:
+        return None
+    embed = MessageEmbed(url = iurl)
+    embed.image = MessageEmbedImage(url = iurl)
+    return embed
 
 class PluginBase():
     def saveConfig(self):
