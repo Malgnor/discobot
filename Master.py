@@ -41,14 +41,14 @@ class Master(Plugin, PluginBase):
         if event.user_id in self.config['copyCatId']:
             self.client.api.channels_typing(event.channel_id)
         
-    @Plugin.command('updatePresence', '<status:str> [game:str...]', level=100)
+    @Plugin.command('updatePresence', '<status:str> [game:str...]', level=100, description='Atualiza o status e o jogo atual do bot.')
     def on_updatepresence_command(self, event, status, game=None):
         if not Status[status]:
             status = 'ONLINE'
         self.client.update_presence(Game(name=game), Status[status])
         event.msg.reply('Atualizando status...')
         
-    @Plugin.command('setCopyCat', '[target:snowflake]', level=100)
+    @Plugin.command('setCopyCat', '[target:snowflake]', level=100, description='Faz o bot imitar usuários.')
     def on_setcopycat_command(self, event, target=None):
         if not target:
             r = 'Alvos:\n' if len(self.config['copyCatId']) else 'Não há alvos.'
@@ -73,21 +73,21 @@ class Master(Plugin, PluginBase):
             self.config['copyCatId'].append(target)
             event.msg.reply('<@{}> adicionado como alvo.'.format(target))
         
-    @Plugin.command('quit', level=500)
+    @Plugin.command('quit', level=500, description='Encerra o bot.')
     def on_quit_command(self, event):
         event.msg.reply('Bye!')
         self.log.info('Calling quit().')
         quit()
 
-    @Plugin.command('saychannel', '<cid:snowflake> <content:str...>', level=50)
+    @Plugin.command('saychannel', '<cid:snowflake> <content:str...>', level=50, description='Manda uma mensagem para um canal.')
     def on_saychannel_command(self, event, cid, content):
         self.client.api.channels_messages_create(cid, content)
 
-    @Plugin.command('faketype', '<cid:snowflake>', level=50)
+    @Plugin.command('faketype', '<cid:snowflake>', level=50, description='Manda evento de \'digitando\' para um canal.')
     def on_faketype_command(self, event, cid):
         self.client.api.channels_typing(cid)
 
-    @Plugin.command('check', '[user:str...]', group='level')
+    @Plugin.command('check', '[user:str...]', group='level', level=10, description='Checa o nível de acesso de um usuário.')
     def on_levelcheck_command(self, event, user=None):
         user = user or event.msg.author.id
         try:
@@ -103,7 +103,7 @@ class Master(Plugin, PluginBase):
         else:
             event.msg.reply('{}: {}'.format(users[0].username, CommandLevels[self.bot.get_level(users[0] if not event.msg.guild else event.msg.guild.get_member(users[0]))]))
     
-    @Plugin.command('set', '<userid:snowflake> <targetLevel:str>', group='level', level=500)
+    @Plugin.command('set', '<userid:snowflake> <targetLevel:str>', group='level', level=500, description='Altera o nível de acesso de um usuário.')
     def on_levelset_command(self, event, userid, targetLevel):
         if not CommandLevels[targetLevel]:
             event.msg.reply('{} é invalido.'.format(targetLevel))
@@ -121,7 +121,7 @@ class Master(Plugin, PluginBase):
             
         event.msg.reply('{} agora é {}.'.format(userid, targetLevel))
             
-    @Plugin.command('group', level=100)
+    @Plugin.command('group', level=100, description='Checa as abreviações de grupos de comandos.')
     def on_group_command(self, event):
         event.msg.reply(json.dumps(self.bot.group_abbrev))
         
@@ -167,18 +167,19 @@ class Master(Plugin, PluginBase):
     # def on_test6_command(self, event):
         # pass
         
-    @Plugin.command('listRoles', level=100)
+    @Plugin.command('listRoles', level=100, description='Mostra uma lista com os cargos de um servidor.')
     def on_listroles_command(self, event):
         if not event.channel.guild:
             event.msg.reply('Este canal não faz parte de um servidor.')
             return
             
-        m = ''
+        m = '```css\n'
         for role in event.channel.guild.roles.values():
             m += '{}:{}\n'.format(role.name, role.id)
+        m += '```'
         event.msg.reply(m)
         
-    @Plugin.command('info', '<query:str...>', level=10)
+    @Plugin.command('info', '<query:str...>', level=10, description='Mostra informações sobre um usuário.')
     def on_info_command(self, event, query):
     
         try:

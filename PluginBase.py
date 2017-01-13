@@ -78,22 +78,23 @@ class PluginBase():
 
         return data
         
-    @Plugin.command('plugins', level=10, aliases=['plugin', 'pluginList', 'listPlugins', 'listPlugin'], hide=True)
+    @Plugin.command('plugins', level=10, aliases=['plugin', 'pluginList', 'listPlugins', 'listPlugin'], description='Mostra a lista de plugins.', hide=True)
     def on_plugins_command(self, event):
         event.msg.reply(self.name)
         
-    @Plugin.command('view', '[plugin:str]', group='config', level=100, hide=True)
+    @Plugin.command('view', '[plugin:str]', group='config', level=100, description='Mostra as configurações de um plugin.', hide=True)
     def on_config_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
-            event.msg.reply('{}:```{}```'.format(self.name, json.dumps(self.config, indent=4)))
+            if self.config:
+                event.msg.reply('{}:```json\n{}```'.format(self.name, json.dumps(self.config, indent=4)))
         
-    @Plugin.command('save', '[plugin:str]', group='config', level=500, hide=True)
+    @Plugin.command('save', '[plugin:str]', group='config', level=500, description='Salva as configurações de um plugin.', hide=True)
     def on_configSave_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             self.saveConfig()
             event.msg.reply('Saved config for: {}'.format(self.name))
         
-    @Plugin.command('reload', '[plugin:str]', group='config', level=500, hide=True)
+    @Plugin.command('reload', '[plugin:str]', group='config', level=500, description='Recarrega as configurações de um plugin.', hide=True)
     def on_configReload_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
             self.config = self.loadConfig()
@@ -102,7 +103,7 @@ class PluginBase():
     @Plugin.command('help', '[plugin:str]', aliases=['ajuda', 'command', 'commands'], description='Mostra a lista de comandos disponíveis para você.', hide=True)
     def on_help_command(self, event, plugin=None):
         if (plugin and plugin == self.name) or not plugin:
-            r = '{}```'.format(self.name)
+            r = '{}```css\n'.format(self.name)
             count = 0
             level = self.bot.get_level(event.msg.author if not event.msg.guild else event.msg.guild.get_member(event.msg.author))
             for c in self.commands:

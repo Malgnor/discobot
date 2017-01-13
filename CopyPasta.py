@@ -21,7 +21,7 @@ class CopyPasta(Plugin, PluginBase):
         config['autosave'] = True
         return config
             
-    @Plugin.command('add', '<name:str> <copypasta:str...>', group='copypasta', level=10)
+    @Plugin.command('add', '<name:str> <copypasta:str...>', group='copypasta', level=10, description='Adiciona um copypasta.')
     def on_copypastaAdd_command(self, event, name, copypasta):
         if name in copypastas:
             event.msg.reply('"' + name + '" já existente.\nUse "copypastaMod" para modificar um copypasta existente.')
@@ -31,7 +31,7 @@ class CopyPasta(Plugin, PluginBase):
             if self.config['autosave']:
                 saveCopyPastas(copypastas)
         
-    @Plugin.command('mod', '<name:str> <copypasta:str...>', group='copypasta', level=10)
+    @Plugin.command('mod', '<name:str> <copypasta:str...>', group='copypasta', level=10, description='Modifica um copypasta')
     def on_copypastaMod_command(self, event, name, copypasta):
         if not name in copypastas:
             event.msg.reply('"' + name + '" inexistente.\nUse "copypastaAdd" para adicionar um novo copypasta.')
@@ -41,7 +41,7 @@ class CopyPasta(Plugin, PluginBase):
             if self.config['autosave']:
                 saveCopyPastas(copypastas)
         
-    @Plugin.command('del', '<name:str>', group='copypasta', level=10)
+    @Plugin.command('del', '<name:str>', group='copypasta', level=10, description='Remove um copypasta.')
     def on_copypastaDel_command(self, event, name):
         if not name in copypastas:
             event.msg.reply('"' + name + '" inexistente.')
@@ -51,7 +51,7 @@ class CopyPasta(Plugin, PluginBase):
             if self.config['autosave']:
                 saveCopyPastas(copypastas)
         
-    @Plugin.command('rename', '<oldname:str> <newname:str>', group='copypasta', level=10)
+    @Plugin.command('rename', '<oldname:str> <newname:str>', group='copypasta', level=10, description='Renomeia um copypasta.')
     def on_copypastaRename_command(self, event, oldname, newname):
         if not oldname in copypastas:
             event.msg.reply('"' + oldname + '" inexistente.')
@@ -62,7 +62,7 @@ class CopyPasta(Plugin, PluginBase):
             if self.config['autosave']:
                 saveCopyPastas(copypastas)
 
-    @Plugin.command('view', '[copypasta:str]', group='copypasta', level=10)
+    @Plugin.command('view', '[copypasta:str]', group='copypasta', level=10, description='Mostra um copypasta.')
     def on_copypasta_command(self, event, copypasta=None):
         if copypasta:
             if copypasta in copypastas:
@@ -77,7 +77,7 @@ class CopyPasta(Plugin, PluginBase):
             else:
                 event.msg.reply("Não há copypastas salvos.")
 
-    @Plugin.command('spam', '<quantity:int>', group='copypasta', level=50)
+    @Plugin.command('spam', '<quantity:int>', group='copypasta', level=50, description='Spamma copypastas.')
     def on_copypastaSpam_command(self, event, quantity):
         keys = copypastas.keys()
         if len(keys):
@@ -87,19 +87,19 @@ class CopyPasta(Plugin, PluginBase):
         else:
             event.msg.reply("Não há copypastas salvos.")
 
-    @Plugin.command('list', group='copypasta', level=10)
+    @Plugin.command('list', group='copypasta', level=10, description='Mostra uma lista com todos os copypastas.')
     def on_copypastaList_command(self, event):
         keys = copypastas.keys()
         if len(keys):
-            res = '```\n'
+            res = '```markdown\n'
             for k in keys:
-                res += k+'\n'
+                res += '* {}\n'.format(k)
             res += '```'
             event.msg.reply(res)
         else:
             event.msg.reply("Não há copypastas salvos.")
 
-    @Plugin.command('all', group='copypasta', level=50)
+    @Plugin.command('all', group='copypasta', level=50, description='Spamma todos os copypastas.')
     def on_copypastaAll_command(self, event):
         keys = copypastas.keys()
         if len(keys):

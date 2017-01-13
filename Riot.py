@@ -15,6 +15,6 @@ class Riot(Plugin, PluginBase):
         j = json.loads(result.text)
         for k in j:
             profileiconid = j[k]['profileIconId']
-        event.msg.reply('```\n'+json.dumps(j, indent=4, ensure_ascii=False)+'\n```',
+        event.msg.reply('```json\n'+json.dumps(j, indent=4, ensure_ascii=False)+'\n```',
             embed=EmbedImageFromUrl('http://ddragon.leagueoflegends.com/cdn/7.1.1/img/profileicon/{}.png'.format(profileiconid))
         )

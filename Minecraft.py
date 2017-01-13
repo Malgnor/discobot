@@ -24,7 +24,7 @@ class Minecraft(Plugin, PluginBase):
         config['server_laststart'] = time.time()
         return config
         
-    @Plugin.command('start', group='minecraft', level=50)
+    @Plugin.command('start', group='minecraft', level=50, description='Inicializa o servidor.')
     def on_start_command(self, event):
         self.client.api.channels_typing(event.msg.channel_id)
         
@@ -39,9 +39,9 @@ class Minecraft(Plugin, PluginBase):
         self.config['server_laststart'] = time.time()
         cmd = 'start {} /d {} /min "java" -Xmx{}M -jar {} -o true'.format(self.config['window_title'], self.config['server_path'], self.config['server_mem'], self.config['server_file'])
         os.system(cmd)
-        event.msg.reply('Inicializando servidor!')
+        event.msg.reply('Inicializando servidor! IP: {}:{}'.format(self.config['server_ip'], self.config['server_port']))
 
-    @Plugin.command('check', '[ip:str] [port:int]', group='minecraft', level=10)
+    @Plugin.command('check', '[ip:str] [port:int]', group='minecraft', level=10, description='Verifica se uma porta em um ip está acessível.')
     def on_check_command(self, event, ip='127.0.0.1', port=25565):
         self.client.api.channels_typing(event.msg.channel_id)
         host = ip
