@@ -3,10 +3,7 @@
 from disco.bot import Bot, Plugin
 from disco.types.message import MessageEmbed
 from disco.bot.command import CommandLevels
-import ujson as json
-import os
-import ruamel.yaml
-import warnings
+import json, os, warnings, ruamel.yaml
 
 warnings.simplefilter('ignore', ruamel.yaml.error.UnsafeLoaderWarning)
 

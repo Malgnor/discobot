@@ -1,4 +1,7 @@
-﻿from PluginBase import *
+﻿# coding=UTF-8
+
+from disco.bot import Bot, Plugin
+import time
 
 class Spam(Plugin):
     @Plugin.command('say', '<count:int> <content:str...>', group='spam', level=100, description='Repete uma mensagem n vezes.')

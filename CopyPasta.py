@@ -1,4 +1,9 @@
-﻿from PluginBase import *
+﻿# coding=UTF-8
+
+from disco.bot import Bot, Plugin
+from PluginManager import AttachmentToEmbed
+import os, random
+import ujson as json
 
 def getCopyPastas():
     if not os.path.isfile('copypastas.json'):

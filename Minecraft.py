@@ -1,5 +1,7 @@
-﻿from PluginBase import *
-import socket
+﻿# coding=UTF-8
+
+from disco.bot import Bot, Plugin
+import socket, os, time
 
 def isOnline(address, port):
     s = socket.socket()

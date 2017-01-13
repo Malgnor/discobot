@@ -1,4 +1,12 @@
-﻿from PluginBase import *
+﻿# coding=UTF-8
+
+from disco.bot import Bot, Plugin
+from disco.bot.command import CommandLevels
+from disco.types.user import Status, Game
+from PluginManager import AttachmentToEmbed, EmbedImageFromUrl
+import disco, warnings, ruamel.yaml, json
+
+warnings.simplefilter('ignore', ruamel.yaml.error.UnsafeLoaderWarning)
 
 class Master(Plugin):
     @staticmethod
