@@ -1,6 +1,6 @@
 ﻿from PluginBase import *
 
-class Riot(Plugin, PluginBase):
+class Riot(Plugin):
     @staticmethod
     def config_cls():
         config = {}

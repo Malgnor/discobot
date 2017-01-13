@@ -1,6 +1,6 @@
 ﻿from PluginBase import *
 
-class Master(Plugin, PluginBase):
+class Master(Plugin):
     @staticmethod
     def config_cls():
         config = {}

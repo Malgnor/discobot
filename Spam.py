@@ -1,6 +1,6 @@
 ﻿from PluginBase import *
 
-class Spam(Plugin, PluginBase):
+class Spam(Plugin):
     @Plugin.command('say', '<count:int> <content:str...>', group='spam', level=100, description='Repete uma mensagem n vezes.')
     def on_spam_command(self, event, count, content):
         for i in range(count):

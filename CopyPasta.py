@@ -14,7 +14,7 @@ def saveCopyPastas(copypastas):
         
 copypastas = getCopyPastas()
 
-class CopyPasta(Plugin, PluginBase):
+class CopyPasta(Plugin):
     @staticmethod
     def config_cls():
         config = {}

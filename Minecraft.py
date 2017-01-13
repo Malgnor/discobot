@@ -11,7 +11,7 @@ def isOnline(address, port):
     except socket.error, e:
         return False
     
-class Minecraft(Plugin, PluginBase):
+class Minecraft(Plugin):
     @staticmethod
     def config_cls():
         config = {}
