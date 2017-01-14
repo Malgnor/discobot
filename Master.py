@@ -12,8 +12,8 @@ class Master(Plugin):
     @staticmethod
     def config_cls():
         config = {}
-        config['channelLogId'] = None
-        config['channelDMId'] = None
+        config['channelLogId'] = 0
+        config['channelDMId'] = 0
         config['copyCatId'] = []
         config['client_config_name'] = 'config.yaml'
         return config

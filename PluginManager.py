@@ -5,7 +5,37 @@ from disco.bot.command import CommandLevels
 from Utils import savePluginConfig, loadPluginConfig
 import json
     
-class PluginManager(Plugin):        
+class PluginManager(Plugin):
+    # @Plugin.command('test', level=100)
+    # def on_test_command(self, event):
+        # pass
+        
+    @Plugin.command('config edit', '<plugin:str> <key:str> <value:str...>', level=100, group='plugin', description='Altera uma configuração do plugin')
+    def on_configedit_command(self, event, plugin, key, value):
+        if plugin in self.bot.plugins:
+            plugin = self.bot.plugins[plugin]
+            if plugin.config:
+                if key in plugin.config:
+                    if type(plugin.config[key]) in [type(list()), type(dict())]:
+                        event.msg.reply('Tipo de valor da chave {} não suportado pelo comando. Tipo: {}'.format(key, type(plugin.config[key])))
+                        return
+                    try:
+                        value = type(plugin.config[key])(value)
+                    except ValueError:
+                        event.msg.reply('Valor {} não pode ser convertido para o mesmo tipo da chave {}.'.format(value, key))
+                        return
+                    except TypeError:
+                        event.msg.reply('Valor {} não pode ser convertido para o mesmo tipo da chave {}.'.format(value, key))
+                        return
+                    plugin.config[key] = value
+                    event.msg.reply('Valor da chave {} alterada para {}.'.format(key, value))
+                else:
+                    event.msg.reply('Plugin {} não possui {} nas configurações.'.format(plugin.name, key))
+            else:
+                event.msg.reply('Plugin {} não possui configurações.'.format(plugin.name))
+        else:
+            event.msg.reply('Plugin {} não encontrado.'.format(plugin))
+        
     @Plugin.command('list', level=10, group='plugin' , description='Mostra a lista de plugins.')
     def on_pluginlist_command(self, event):
         event.msg.reply('\n'.join(self.bot.plugins))   
@@ -52,7 +82,7 @@ class PluginManager(Plugin):
             event.msg.reply('Plugin {} não encontrado.'.format(plugin))
             return
         
-    @Plugin.command('view', '[plugin:str]', group='config', level=100, description='Mostra as configurações de um plugin.')
+    @Plugin.command('config view', '[plugin:str]', group='plugin', level=100, description='Mostra as configurações de um plugin.')
     def on_config_command(self, event, plugin=None):
         self.client.api.channels_typing(event.msg.channel_id)
         
@@ -78,7 +108,7 @@ class PluginManager(Plugin):
                 toSend += config
             event.msg.reply(toSend)
         
-    @Plugin.command('save', '[plugin:str] [format:str]', group='config', level=500, description='Salva as configurações de um plugin.')
+    @Plugin.command('config save', '[plugin:str] [format:str]', group='plugin', level=500, description='Salva as configurações de um plugin.')
     def on_configSave_command(self, event, plugin=None, format=None):
         self.client.api.channels_typing(event.msg.channel_id)
         
@@ -100,7 +130,7 @@ class PluginManager(Plugin):
                     saved.append(plugin.name)
             event.msg.reply('Configurações dos plugins {} foram salvas.'.format(', '.join(saved)))
         
-    @Plugin.command('reload', '[plugin:str] [format:str]', group='config', level=500, description='Recarrega as configurações de um plugin.')
+    @Plugin.command('config reload', '[plugin:str] [format:str]', group='plugin', level=500, description='Recarrega as configurações de um plugin.')
     def on_configReload_command(self, event, plugin=None, format=None):
         self.client.api.channels_typing(event.msg.channel_id)
         
