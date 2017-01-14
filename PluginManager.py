@@ -68,17 +68,48 @@ def loadConfig(plugin):
     return data
     
 class PluginManager(Plugin):        
-    @Plugin.command('plugins', level=10, aliases=['plugin', 'pluginList', 'listPlugins', 'listPlugin'], description='Mostra a lista de plugins.')
-    def on_plugins_command(self, event):
-        event.msg.reply('\n'.join(self.bot.plugins))
+    @Plugin.command('list', level=10, group='plugin' , description='Mostra a lista de plugins.')
+    def on_pluginlist_command(self, event):
+        event.msg.reply('\n'.join(self.bot.plugins))   
         
-    @Plugin.command('reload', '<plugin:str>', level=100, description='Recarrega um plugin.', oob=True)
-    def on_reload_command(self, event, plugin):
+    @Plugin.command('groups', level=10, group='plugin' , description='Mostra a lista de grupos de comandos e sua menor abreviação usável.')
+    def on_plugingroups_command(self, event):
+        m = '```css\n'
+        m += 'Grupo:Abreviação\n\n'
+        for group, abbrev in self.bot.group_abbrev.items():
+            m += '{}:{}\n'.format(group, abbrev)
+        m += '```'
+        event.msg.reply(m)
+        
+    @Plugin.command('reload', '<plugin:str>', group='plugin', level=100, description='Recarrega um plugin.', oob=True)
+    def on_pluginreload_command(self, event, plugin):
         self.client.api.channels_typing(event.msg.channel_id)
         
         if plugin in self.bot.plugins:
             self.bot.plugins[plugin].reload()
             event.msg.reply('Plugin {} recarregado.'.format(plugin))
+        else:
+            event.msg.reply('Plugin {} não encontrado.'.format(plugin))
+            return
+        
+    @Plugin.command('add', '<plugin:str>', group='plugin', level=100, description='Recarrega um plugin.', oob=True)
+    def on_pluginadd_command(self, event, plugin):
+        self.client.api.channels_typing(event.msg.channel_id)
+        try:
+            self.bot.add_plugin_module(plugin)
+        except e:
+            event.msg.reply('Erro ao tentar adicionar plugin {}: {}.'.format(plugin, e))
+            return
+        
+        event.msg.reply('Plugin {} carregado.'.format(plugin))
+        
+    @Plugin.command('remove', '<plugin:str>', group='plugin', level=100, description='Recarrega um plugin.', oob=True)
+    def on_pluginremove_command(self, event, plugin):
+        self.client.api.channels_typing(event.msg.channel_id)
+        
+        if plugin in self.bot.plugins:
+            self.bot.rmv_plugin(self.bot.plugins[plugin].__class__)
+            event.msg.reply('Plugin {} removido.'.format(plugin))
         else:
             event.msg.reply('Plugin {} não encontrado.'.format(plugin))
             return

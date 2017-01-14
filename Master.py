@@ -129,10 +129,13 @@ class Master(Plugin):
             
         event.msg.reply('{} agora é {}.'.format(userid, targetLevel))
             
-    @Plugin.command('group', level=100, description='Checa as abreviações de grupos de comandos.')
-    def on_group_command(self, event):
-        event.msg.reply(json.dumps(self.bot.group_abbrev))
+    # @Plugin.command('group', level=100, description='Checa as abreviações de grupos de comandos.')
+    # def on_group_command(self, event):
+        # event.msg.reply('````css\n{}```'.format(json.dumps(self.bot.group_abbrev)))
         
+        # for command in self.bot.commands:
+            # del command._compiled_regex
+            
         # groups = set(command.group for command in self.bot.commands if command.group)
         
         # event.msg.reply(json.dumps(groups))
