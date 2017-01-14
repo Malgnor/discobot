@@ -11,7 +11,7 @@ class PluginManager(Plugin):
         if self.bot.config and len(self.bot.config.levels):
             try:
                 self.bot.config.levels = {int(k): v for k, v in self.bot.config.levels.items()}
-            except e:
+            except Exception as e:
                 self.log.info('`BotConfig.levels` keys should be `ints`')
             
     @Plugin.command('config save', '[path:str...]', level=500, group='bot', description='Salva as configurações do bot/client.')

@@ -11,7 +11,7 @@
 		"storage_enabled": true,
 		"levels": {
 			"userID": "owner",
-			"roleID": "admin",
+			"roleID": "admin"
 		},
 		"commands_allow_edit": true,
 		"storage_config": {},

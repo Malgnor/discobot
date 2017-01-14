@@ -1,3 +1,5 @@
+# coding=UTF-8
+
 from disco.types.message import MessageEmbed
 from disco.util.serializer import Serializer
 from disco.bot import BotConfig
