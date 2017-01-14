@@ -2,13 +2,61 @@
 
 from disco.bot import Bot, Plugin
 from disco.bot.command import CommandLevels
-from Utils import savePluginConfig, loadPluginConfig
+from Utils import savePluginConfig, loadPluginConfig, saveBotConfig, loadBotConfig
 import json
     
 class PluginManager(Plugin):
-    # @Plugin.command('test', level=100)
-    # def on_test_command(self, event):
-        # pass
+    def __init__(self, bot, config):
+        super(PluginManager, self).__init__(bot, config)
+        if self.bot.config and len(self.bot.config.levels):
+            try:
+                self.bot.config.levels = {int(k): v for k, v in self.bot.config.levels.items()}
+            except e:
+                self.log.info('`BotConfig.levels` keys should be `ints`')
+            
+    @Plugin.command('config save', '[path:str...]', level=500, group='bot', description='Salva as configurações do bot/client.')
+    def on_botsave_command(self, event, path='config.json'):
+        try:
+            saveBotConfig(self.bot, path)
+            event.msg.reply('Configurações do bot/client salvas em {}.'.format(path))
+        except Exception as e:
+            event.msg.reply('Erro: {}.'.format(e))
+            
+    @Plugin.command('config reload', '[path:str...]', level=500, group='bot', description='Recarrega as configurações do bot/client.')
+    def on_botreload_command(self, event, path='config.json'):
+        try:
+            if loadBotConfig(self.bot, path):
+                event.msg.reply('Configurações do bot/client recarregadas.')
+            else:
+                event.msg.reply('Arquivo {} inexistente.'.format(path))
+        except Exception as e:
+            event.msg.reply('Erro: {}.'.format(e))
+
+    @Plugin.command('level check', '[user:str...]', group='bot', level=10, description='Checa o nível de acesso de um usuário.')
+    def on_levelcheck_command(self, event, user=None):
+        user = user or event.msg.author.id
+        try:
+            uid = int(user)
+        except ValueError:
+            uid = user
+        users = list(self.state.users.select({'username': user}, {'id': uid}))
+
+        if not users:
+            event.msg.reply("Couldn't find user for your query: `{}`".format(user))
+        elif len(users) > 1:
+            event.msg.reply('I found too many users ({}) for your query: `{}`'.format(len(users), user))
+        else:
+            event.msg.reply('{}: {}'.format(users[0].username, CommandLevels[self.bot.get_level(users[0] if not event.msg.guild else event.msg.guild.get_member(users[0]))]))
+    
+    @Plugin.command('level set', '<userid:snowflake> <targetLevel:str>', group='bot', level=500, description='Altera o nível de acesso de um usuário.')
+    def on_levelset_command(self, event, userid, targetLevel):
+        if not CommandLevels[targetLevel]:
+            event.msg.reply('{} é invalido.'.format(targetLevel))
+            return
+            
+        self.bot.config.levels[userid] = targetLevel
+            
+        event.msg.reply('{} agora é {}.'.format(userid, targetLevel))
         
     @Plugin.command('config edit', '<plugin:str> <key:str> <value:str...>', level=100, group='plugin', description='Altera uma configuração do plugin')
     def on_configedit_command(self, event, plugin, key, value):

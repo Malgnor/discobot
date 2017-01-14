@@ -1,0 +1,34 @@
+{
+	"bot": {
+		"commands_group_abbrev": true,
+		"commands_prefix": "",
+		"plugin_config_dir": "config",
+		"plugin_config_format": "json",
+		"commands_enabled": true,
+		"plugin_config_provider": null,
+		"commands_level_getter": null,
+		"storage_provider": "memory",
+		"storage_enabled": true,
+		"levels": {
+			"userID": "owner",
+			"roleID": "admin",
+		},
+		"commands_allow_edit": true,
+		"storage_config": {},
+		"commands_require_mention": true,
+		"plugins": ["PluginManager"],
+		"commands_mention_rules": {
+			"everyone": false,
+			"role": true,
+			"user": true,
+			"here": false
+		}
+	},
+	"manhole_enable": false,
+	"encoder": "json",
+	"manhole_bind": ["127.0.0.1", 8484],
+	"token": "Your-Discord-Token",
+	"shard_count": 1,
+	"shard_id": 0,
+	"max_reconnects": 5
+}

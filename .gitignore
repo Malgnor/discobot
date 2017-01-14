@@ -89,7 +89,6 @@ ENV/
 .ropeproject
 
 *.bat
-*.cfg
-*.json
 config/
 myConfig.yaml
+myConfig.json

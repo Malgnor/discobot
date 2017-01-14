@@ -4,9 +4,7 @@ from disco.bot import Bot, Plugin
 from disco.bot.command import CommandLevels
 from disco.types.user import Status, Game
 from Utils import AttachmentToEmbed, EmbedImageFromUrl
-import disco, warnings, ruamel.yaml, json
-
-warnings.simplefilter('ignore', ruamel.yaml.error.UnsafeLoaderWarning)
+import disco, json
 
 class Master(Plugin):
     @staticmethod
@@ -15,7 +13,6 @@ class Master(Plugin):
         config['channelLogId'] = 0
         config['channelDMId'] = 0
         config['copyCatId'] = []
-        config['client_config_name'] = 'config.yaml'
         return config
 
     @Plugin.listen('Ready')
@@ -94,66 +91,7 @@ class Master(Plugin):
     @Plugin.command('faketype', '<cid:snowflake>', level=50, description='Manda evento de \'digitando\' para um canal.')
     def on_faketype_command(self, event, cid):
         self.client.api.channels_typing(cid)
-
-    @Plugin.command('check', '[user:str...]', group='level', level=10, description='Checa o nível de acesso de um usuário.')
-    def on_levelcheck_command(self, event, user=None):
-        user = user or event.msg.author.id
-        try:
-            uid = int(user)
-        except ValueError:
-            uid = user
-        users = list(self.state.users.select({'username': user}, {'id': uid}))
-
-        if not users:
-            event.msg.reply("Couldn't find user for your query: `{}`".format(user))
-        elif len(users) > 1:
-            event.msg.reply('I found too many users ({}) for your query: `{}`'.format(len(users), user))
-        else:
-            event.msg.reply('{}: {}'.format(users[0].username, CommandLevels[self.bot.get_level(users[0] if not event.msg.guild else event.msg.guild.get_member(users[0]))]))
-    
-    @Plugin.command('set', '<userid:snowflake> <targetLevel:str>', group='level', level=500, description='Altera o nível de acesso de um usuário.')
-    def on_levelset_command(self, event, userid, targetLevel):
-        if not CommandLevels[targetLevel]:
-            event.msg.reply('{} é invalido.'.format(targetLevel))
-            return
-            
-        self.bot.config.levels[userid] = targetLevel
         
-        with open(self.config['client_config_name'], 'r') as file:
-            c = ruamel.yaml.load(file.read())
-        
-        c['bot']['levels'][userid] = targetLevel
-        
-        with open(self.config['client_config_name'], 'w') as file:
-            file.write(ruamel.yaml.dump(c))
-            
-        event.msg.reply('{} agora é {}.'.format(userid, targetLevel))
-            
-    # @Plugin.command('group', level=100, description='Checa as abreviações de grupos de comandos.')
-    # def on_group_command(self, event):
-        # event.msg.reply('````css\n{}```'.format(json.dumps(self.bot.group_abbrev)))
-        
-        # for command in self.bot.commands:
-            # del command._compiled_regex
-            
-        # groups = set(command.group for command in self.bot.commands if command.group)
-        
-        # event.msg.reply(json.dumps(groups))
-        
-        # abbrev = {}
-        
-        # for group in groups:
-            # for i in range(1, len(group)):
-                # if not group[:i] in abbrev.values():
-                    # abbrev[group] = group[:i]
-                    # break
-                # conflict = {k: k[:i+1] for k, v in abbrev.items() if v == group[:i]}
-                # abbrev.update(conflict)
-                
-        # self.bot.group_abbrev.update(abbrev)
-        # self.bot.compute_command_matches_re()
-        # event.msg.reply(json.dumps(self.bot.group_abbrev))
-            
     # @Plugin.command('test', group='test', level=100)
     # def on_test1_command(self, event):
         # pass

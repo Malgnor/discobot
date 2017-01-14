@@ -6,11 +6,11 @@ bot:
   commands_mention_rules: {everyone: false, here: false, role: true, user: true}
   commands_prefix: ''
   commands_require_mention: true
-  levels: {userID: 'owner', roleID: 'mod'}
+  levels: {userID: 'owner', roleID: 'admin'}
   plugin_config_dir: config
   plugin_config_format: json
   plugin_config_provider: null
-  plugins: ['Plugin', 'AnotherPlugin']
+  plugins: ['PluginManager']
   storage_config: {}
   storage_enabled: true
   storage_provider: memory
