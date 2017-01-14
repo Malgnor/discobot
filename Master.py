@@ -3,7 +3,7 @@
 from disco.bot import Bot, Plugin
 from disco.bot.command import CommandLevels
 from disco.types.user import Status, Game
-from PluginManager import AttachmentToEmbed, EmbedImageFromUrl
+from Utils import AttachmentToEmbed, EmbedImageFromUrl
 import disco, warnings, ruamel.yaml, json
 
 warnings.simplefilter('ignore', ruamel.yaml.error.UnsafeLoaderWarning)

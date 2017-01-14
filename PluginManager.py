@@ -1,71 +1,9 @@
 ﻿# coding=UTF-8
 
 from disco.bot import Bot, Plugin
-from disco.types.message import MessageEmbed
 from disco.bot.command import CommandLevels
-import json, os, warnings, ruamel.yaml
-
-warnings.simplefilter('ignore', ruamel.yaml.error.UnsafeLoaderWarning)
-
-def AttachmentToEmbed(attachments):
-    embed = None
-    if len(attachments):
-        for attachment in attachments.values():
-            embed = MessageEmbed(title = attachment.filename, url = attachment.url)
-            embed.set_image(url = attachment.url, proxy_url = attachment.proxy_url, width = attachment.width, height = attachment.height) if attachment.width else None
-            break
-    return embed
-    
-def EmbedImageFromUrl(iurl):
-    if not iurl:
-        return None
-    embed = MessageEmbed(url = iurl)
-    embed.set_image(url = iurl)
-    return embed
-
-def saveConfig(plugin):
-    if not plugin.config:
-        plugin.log.info('There is no configuration to save.')
-        return
-    
-    name = plugin.name
-    if name.endswith('plugin'):
-        name = name[:-6]
-
-    path = os.path.join(
-        plugin.bot.config.plugin_config_dir, name) + '.' + plugin.bot.config.plugin_config_format
-
-    if not os.path.exists(os.path.dirname(path)):
-        os.makedirs(os.path.dirname(path))
-    
-    with open(path, 'w') as file:
-        file.write(ruamel.yaml.dump(plugin.config))
-    plugin.log.info('{} saved.'.format(path))
-    
-def loadConfig(plugin):
-    plugin.log.info('Reloading config for plugin: {}'.format(plugin.name))
-    
-    name = plugin.name
-    if name.endswith('plugin'):
-        name = name[:-6]
-
-    path = os.path.join(
-        plugin.bot.config.plugin_config_dir, name) + '.' + plugin.bot.config.plugin_config_format
-    
-    if not os.path.exists(path):
-        if hasattr(plugin, 'config_cls'):
-            return plugin.config_cls()
-        return
-    
-    with open(path, 'r') as file:
-        data = ruamel.yaml.load(file.read())
-
-    if hasattr(plugin, 'config_cls'):
-        inst = plugin.config_cls()
-        inst.update(data)
-        return inst
-
-    return data
+from Utils import savePluginConfig, loadPluginConfig
+import json
     
 class PluginManager(Plugin):        
     @Plugin.command('list', level=10, group='plugin' , description='Mostra a lista de plugins.')
@@ -140,15 +78,15 @@ class PluginManager(Plugin):
                 toSend += config
             event.msg.reply(toSend)
         
-    @Plugin.command('save', '[plugin:str]', group='config', level=500, description='Salva as configurações de um plugin.')
-    def on_configSave_command(self, event, plugin=None):
+    @Plugin.command('save', '[plugin:str] [format:str]', group='config', level=500, description='Salva as configurações de um plugin.')
+    def on_configSave_command(self, event, plugin=None, format=None):
         self.client.api.channels_typing(event.msg.channel_id)
         
         if plugin:
             if plugin in self.bot.plugins:
                 plugin = self.bot.plugins[plugin]
                 if plugin.config:
-                    saveConfig(plugin)
+                    savePluginConfig(self.bot, plugin, format)
                     event.msg.reply('Configurações do plugin {} foram salvas.'.format(plugin.name))
                 else:
                     event.msg.reply('Plugin {} não possui configurações.'.format(plugin.name))
@@ -158,19 +96,19 @@ class PluginManager(Plugin):
             saved = []
             for plugin in self.bot.plugins.values():
                 if plugin.config:
-                    saveConfig(plugin)
+                    savePluginConfig(self.bot, plugin, format)
                     saved.append(plugin.name)
             event.msg.reply('Configurações dos plugins {} foram salvas.'.format(', '.join(saved)))
         
-    @Plugin.command('reload', '[plugin:str]', group='config', level=500, description='Recarrega as configurações de um plugin.')
-    def on_configReload_command(self, event, plugin=None):
+    @Plugin.command('reload', '[plugin:str] [format:str]', group='config', level=500, description='Recarrega as configurações de um plugin.')
+    def on_configReload_command(self, event, plugin=None, format=None):
         self.client.api.channels_typing(event.msg.channel_id)
         
         if plugin:
             if plugin in self.bot.plugins:
                 plugin = self.bot.plugins[plugin]
                 if plugin.config:
-                    plugin.config = loadConfig(plugin)
+                    plugin.config = loadPluginConfig(self.bot, plugin, format)
                     event.msg.reply('Configurações do plugin {} foram recarregadas.'.format(plugin.name))
                 else:
                     event.msg.reply('Plugin {} não possui configurações.'.format(plugin.name))
@@ -180,7 +118,7 @@ class PluginManager(Plugin):
             loaded = []
             for plugin in self.bot.plugins.values():
                 if plugin.config:
-                    plugin.config = loadConfig(plugin)
+                    plugin.config = loadPluginConfig(self.bot, plugin, format)
                     loaded.append(plugin.name)
             event.msg.reply('Configurações dos plugins {} foram recarregadas.'.format(', '.join(loaded)))
         

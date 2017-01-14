@@ -1,7 +1,7 @@
 ﻿# coding=UTF-8
 
 from disco.bot import Bot, Plugin
-from PluginManager import AttachmentToEmbed
+from Utils import AttachmentToEmbed
 import os, random
 import ujson as json
 

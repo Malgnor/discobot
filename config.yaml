@@ -8,7 +8,7 @@ bot:
   commands_require_mention: true
   levels: {userID: 'owner', roleID: 'mod'}
   plugin_config_dir: config
-  plugin_config_format: yaml
+  plugin_config_format: json
   plugin_config_provider: null
   plugins: ['Plugin', 'AnotherPlugin']
   storage_config: {}

@@ -1,7 +1,7 @@
 ﻿# coding=UTF-8
 
 from disco.bot import Bot, Plugin
-from PluginManager import EmbedImageFromUrl
+from Utils import EmbedImageFromUrl
 import requests, json
 
 class Riot(Plugin):
