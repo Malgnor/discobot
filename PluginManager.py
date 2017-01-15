@@ -14,6 +14,14 @@ class PluginManager(Plugin):
             except Exception as e:
                 self.log.info('`BotConfig.levels` keys should be `ints`')
             
+    @Plugin.command('storage save', level=500, group='bot', description='Força o salvamento dos dados do bot.')
+    def on_botstoragesave_command(self, event):
+        if self.storage:
+            self.storage.provider.save()
+            event.msg.reply('Dados salvos.')
+        else:
+            event.msg.reply('Não há sistema de dados ativos.')
+            
     @Plugin.command('config save', '[path:str...]', level=500, group='bot', description='Salva as configurações do bot/client.')
     def on_botsave_command(self, event, path='config.json'):
         try:

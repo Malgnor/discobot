@@ -92,3 +92,4 @@ ENV/
 config/
 myConfig.yaml
 myConfig.json
+storage.json

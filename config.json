@@ -7,14 +7,21 @@
 		"commands_enabled": true,
 		"plugin_config_provider": null,
 		"commands_level_getter": null,
-		"storage_provider": "memory",
+		"storage_provider": "disk",
 		"storage_enabled": true,
 		"levels": {
 			"userID": "owner",
 			"roleID": "admin"
 		},
 		"commands_allow_edit": true,
-		"storage_config": {},
+		"storage_config": {{
+            "format": "json",
+            "path": "storage",
+            "fsync": true,
+            "fsync_changes": 1,
+            "autosave": true,
+            "autosave_interval": 150
+        },
 		"commands_require_mention": true,
 		"plugins": ["PluginManager"],
 		"commands_mention_rules": {
