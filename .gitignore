@@ -90,6 +90,7 @@ ENV/
 
 *.bat
 config/
+img/
 myConfig.yaml
 myConfig.json
 storage.json
