@@ -4,8 +4,7 @@ from disco.bot import Bot, Plugin
 from disco.bot.command import CommandLevels
 from disco.types.user import Status, Game
 from Utils import AttachmentToEmbed, EmbedImageFromUrl
-from PIL import Image
-import disco, json, requests, pytesseract, ntpath
+import disco
 
 class Master(Plugin):
     @staticmethod
@@ -37,42 +36,6 @@ class Master(Plugin):
     def on_message_create(self, event):
         if event.author == self.state.me:
             return
-        if 'ocr' in event.content:
-            msg = self.client.api.channels_messages_create(event.channel_id, 'Procurando imagem na mensagem.')
-            img = None
-            for a in event.attachments.values():
-                if a.width:
-                    r = requests.get(a.url)
-                    if r.status_code == 200:
-                        with open('img/'+a.filename, 'wb') as f:
-                            f.write(r.content)
-                        img = Image.open('img/'+a.filename)
-                        break
-            if not img:
-                for e in event.embeds:
-                    if e.type == 'image':
-                        r = requests.get(e.url)
-                        if r.status_code == 200:
-                            filename = ntpath.basename(e.url)
-                            if '?' in filename:
-                                filename = filename[:filename.index('?')]
-                            with open('img/'+filename, 'wb') as f:
-                                f.write(r.content)
-                            img = Image.open('img/'+filename)
-                            break
-            if img:
-                msg.edit('Processando imagem.')
-                img.load()
-                m = pytesseract.image_to_string(img)
-                if m:
-                    if len(m) > 2000:
-                        msg.edit('Mensagem acima do limite de caracteres.')
-                    else:
-                        msg.edit(m)
-                else:
-                    msg.edit('Falha ao processar imagem.(Não contém texto?)')
-            else:
-                msg.edit('Imagem não encontrada.')
         if event.channel.type == 1 and self.config['channelDMId']:
             self.client.api.channels_messages_create(self.config['channelDMId'], '[DM]{}: {}'.format(event.author.mention, event.content), event.nonce, event.tts, None, AttachmentToEmbed(event.attachments))
         if event.author.id in self.config['copyCatId']:
