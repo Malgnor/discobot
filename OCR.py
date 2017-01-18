@@ -5,12 +5,6 @@ from PIL import Image
 from pytesseract import image_to_string as img2str
 import requests, io
 
-def IMGfromURL(url):
-    r = requests.get(url)
-    if r.status_code == 200:
-        return Image.open(io.BytesIO(r.content))
-    return None
-
 class OCR(Plugin):
     @staticmethod
     def config_cls():
@@ -26,40 +20,34 @@ class OCR(Plugin):
                 self.client.api.channels_messages_create(event.channel_id, '{} não possui permissão para usar essa funcionalidade.'.format(event.author.mention))
                 return
             try:
-                cache = self.storage.plugin.ensure('ocr_cache')
-                incache = False
                 url = None
                 msg = self.client.api.channels_messages_create(event.channel_id, 'Procurando imagem na mensagem.')
-                img = None
                 for a in event.attachments.values():
                     if a.width:
                         url = a.url
-                        if url in cache:
-                            incache = True
-                            break
-                        img = IMGfromURL(url)
-                        if img:
-                            break
-                if not img and not incache:
+                        break
+                if not url:
                     for e in event.embeds:
                         if e.type == 'image':
-                            url = e.url
-                            if url in cache:
-                                incache = True
-                                break
-                            img = IMGfromURL(url)
-                            if img:
-                                break
-                if img or incache:
+                            url = e.image.url or e.thumbnail.url
+                            break
+                if url:
+                    cache = self.storage.plugin.ensure('ocr_cache')
                     m = None
-                    if incache:
+                    if url in cache:
                         msg.edit('Encontrado processamento anterior em cache.')
                         m = cache[url]
                     else:
                         msg.edit('Processando imagem.')
-                        img.load()
-                        m = img2str(img)
-                        cache[url] = m
+                        r = requests.get(url)
+                        if r.status_code == 200:
+                            if 'image' in r.headers['Content-Type']:
+                                with Image.open(io.BytesIO(r.content)) as img:
+                                    img.load()
+                                    m = img2str(img)
+                                    cache[url] = m
+                            else:
+                                raise Exception('Url não é uma imagem(?). {}'.format(url))
                     if m:
                         if len(m) > 2000:
                             msg.edit('Resultado acima do limite de caracteres para uma mensagem.')
@@ -75,11 +63,11 @@ class OCR(Plugin):
                         else:
                             msg.edit(m)
                     else:
-                        msg.edit('Falha ao processar imagem.(Não contém texto?)')
+                        msg.edit('Falha ao processar imagem.')
                 else:
-                    msg.edit('Nenhuma magem encontrada mensagem.')
+                    msg.edit('Nenhuma imagem encontrada mensagem.')
             except Exception as e:
-                self.client.api.channels_messages_create(event.channel_id, 'Error: '+e)
+                self.client.api.channels_messages_create(event.channel_id, 'Error: {}'.format(e))
                 
     @Plugin.command('toggle', level=100, group='OCR', description='Ativa/desativa OCR.')
     def on_ocrtoggle_command(self, event):
