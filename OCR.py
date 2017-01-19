@@ -3,7 +3,7 @@
 from disco.bot import Bot, Plugin
 from PIL import Image
 from pytesseract import image_to_string as img2str
-import requests, io
+import requests, io, re
 
 class OCR(Plugin):
     @staticmethod
@@ -31,7 +31,17 @@ class OCR(Plugin):
                         if e.type == 'image':
                             url = e.image.url or e.thumbnail.url
                             break
+                if not url:
+                    urls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', event.content)
+                    if len(urls):
+                        url = urls[0]
                 if url:
+                    if '<' in url:
+                        idx = url.index('<')
+                        url = url[:idx]+url[idx+1:]
+                    if '>' in url:
+                        idx = url.index('>')
+                        url = url[:idx]+url[idx+1:]
                     cache = self.storage.plugin.ensure('ocr_cache')
                     m = None
                     if url in cache:
