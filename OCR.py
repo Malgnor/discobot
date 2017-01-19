@@ -3,7 +3,7 @@
 from disco.bot import Bot, Plugin
 from PIL import Image
 from pytesseract import image_to_string as img2str
-import requests, io, re
+import requests, io, re, time
 
 class OCR(Plugin):
     @staticmethod
@@ -20,22 +20,20 @@ class OCR(Plugin):
                 self.client.api.channels_messages_create(event.channel_id, '{} não possui permissão para usar essa funcionalidade.'.format(event.author.mention))
                 return
             try:
-                url = None
-                msg = self.client.api.channels_messages_create(event.channel_id, 'Procurando imagem na mensagem.')
+                urls = set()
+                msg = self.client.api.channels_messages_create(event.channel_id, 'Procurando imagens na mensagem.')
                 for a in event.attachments.values():
                     if a.width:
-                        url = a.url
-                        break
-                if not url:
-                    for e in event.embeds:
-                        if e.type == 'image':
-                            url = e.image.url or e.thumbnail.url
-                            break
-                if not url:
-                    urls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', event.content)
-                    if len(urls):
-                        url = urls[0]
-                if url:
+                        urls.add(a.url)
+                for e in event.embeds:
+                    if e.type == 'image':
+                        urls.add(e.image.url)
+                        urls.add(e.thumbnail.url)
+                reurls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', event.content)
+                for u in reurls:
+                    urls.add(u)
+                urls = set(u for u in urls if isinstance(u, (unicode, str)))
+                for url in urls:
                     if '<' in url:
                         idx = url.index('<')
                         url = url[:idx]+url[idx+1:]
@@ -57,8 +55,9 @@ class OCR(Plugin):
                                     m = img2str(img)
                                     cache[url] = m
                             else:
-                                raise Exception('Url não é uma imagem(?). {}'.format(url))
+                                cache[url] = m
                     if m:
+                        m = '`{}`\n'.format(url)+m
                         if len(m) > 2000:
                             msg.edit('Resultado acima do limite de caracteres para uma mensagem.')
                             while len(m) > 2000:
@@ -71,11 +70,13 @@ class OCR(Plugin):
                                     m = m[2000:]
                             self.client.api.channels_messages_create(event.channel_id, m)
                         else:
-                            msg.edit(m)
+                            self.client.api.channels_messages_create(event.channel_id, m)
                     else:
                         msg.edit('Falha ao processar imagem.')
                 else:
                     msg.edit('Nenhuma imagem encontrada mensagem.')
+                time.sleep(2)
+                msg.delete()
             except Exception as e:
                 self.client.api.channels_messages_create(event.channel_id, 'Error: {}'.format(e))
                 
