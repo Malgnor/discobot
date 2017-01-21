@@ -1,7 +1,7 @@
 ﻿# coding=UTF-8
 
 from disco.bot import Bot, Plugin
-from PIL import Image, ImageOps, ImageFilter
+from PIL import Image, ImageOps, ImageFilter, ImageSequence
 from pytesseract import image_to_string as img2str
 import requests, io, re, time
 
@@ -82,6 +82,9 @@ class OCR(Plugin):
                     cache = self.storage.plugin.ensure('ocr_cache') if self.config['cache'] else {}
                     m = None
                     enhancedImg = None
+                    firstFrame = None
+                    othersFrames = []
+                    dur = None
                     if url in cache:
                         msg.edit('Encontrado processamento anterior em cache.')
                         m = cache[url]
@@ -92,14 +95,32 @@ class OCR(Plugin):
                             if 'image' in r.headers['Content-Type']:
                                 with Image.open(io.BytesIO(r.content)) as img:
                                     img.load()
-                                    if self.config['processImage']:
-                                        if self.config['unsharpMask'][0]:
-                                            enhancedImg = img.filter(ImageFilter.UnsharpMask(self.config['unsharpMask'][0], self.config['unsharpMask'][1], self.config['unsharpMask'][2]))
-                                        if self.config['binarize']:
-                                            grayScale = ImageOps.grayscale(enhancedImg or img)
-                                            threshold = isoData(grayScale.histogram())
-                                            enhancedImg = grayScale.point(lambda pixel: pixel > threshold and 255)
-                                    m = img2str(enhancedImg or img)
+                                    idx = 0
+                                    q = len([i for i in ImageSequence.Iterator(img)])
+                                    if not q == 1:
+                                        m = ''
+                                        dur = img.info['duration'] or 250
+                                    for frame in ImageSequence.Iterator(img):
+                                        if frame.mode == 'P':
+                                            frame = frame.convert('RGBA')
+                                        if self.config['processImage']:
+                                            if self.config['unsharpMask'][0]:
+                                                enhancedImg = frame.filter(ImageFilter.UnsharpMask(self.config['unsharpMask'][0], self.config['unsharpMask'][1], self.config['unsharpMask'][2]))
+                                            if self.config['binarize']:
+                                                grayScale = ImageOps.grayscale(enhancedImg or frame)
+                                                threshold = isoData(grayScale.histogram())
+                                                enhancedImg = grayScale.point(lambda pixel: pixel > threshold and 255)
+                                        if q == 1:
+                                            m = img2str(enhancedImg or frame)
+                                        else:
+                                            r = img2str(enhancedImg or frame)
+                                            if r:
+                                                m += '`Frame {}:` {}\n'.format(idx, r)
+                                            if idx == 0:
+                                                firstFrame = enhancedImg or frame
+                                            else:
+                                                othersFrames.append(enhancedImg or frame)
+                                        idx += 1
                                     cache[url] = m
                             else:
                                 cache[url] = m
@@ -118,8 +139,11 @@ class OCR(Plugin):
                         msg.edit('Falha ao processar imagem.')
                     if self.config['uploadProcessedImage'] and enhancedImg:
                         buffer = io.BytesIO()
-                        enhancedImg.save(buffer, 'png')
-                        self.client.api.channels_messages_create(event.channel_id, '', attachment=('result.png', buffer.getvalue()))
+                        if firstFrame:
+                            firstFrame.save(buffer, 'gif', duration=dur, save_all=True, append_images=othersFrames)
+                        else:
+                            enhancedImg.save(buffer, 'png')
+                        self.client.api.channels_messages_create(event.channel_id, '', attachment=('result.{}'.format('gif' if firstFrame else 'png'), buffer.getvalue()))
                 time.sleep(2)
                 msg.delete()
             except Exception as e:
