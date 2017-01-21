@@ -1,20 +1,59 @@
 ﻿# coding=UTF-8
 
 from disco.bot import Bot, Plugin
-from PIL import Image
+from PIL import Image, ImageOps, ImageFilter
 from pytesseract import image_to_string as img2str
 import requests, io, re, time
 
+def isoData(data): #https://github.com/fiji/Auto_Threshold/blob/master/src/main/java/fiji/threshold/Auto_Threshold.java
+    g = 0
+    for i in range(1, len(data)):
+        if data[i] > 0:
+            g = i + 1
+            break
+        
+    while True:
+        l = 0
+        totl = 0
+        for i in range(g):
+             totl = totl + data[i]
+             l = l + (data[i] * i)
+        
+        h = 0
+        toth = 0
+        for i in range(g+1, len(data)):
+            toth += data[i]
+            h += (data[i]*i)
+        
+        if totl > 0 and toth > 0:
+            l /= totl
+            h /= toth
+            if g == int(round((l + h) / 2.0)):
+                break
+        
+        g += 1
+        if g > len(data)-2:
+            return -1
+
+    return g
+    
 class OCR(Plugin):
     @staticmethod
     def config_cls():
         config = {}
         config['enabled'] = False
+        config['uploadProcessedImage'] = False
+        config['cache'] = True
+        config['processImage'] = True
+        config['binarize'] = True
         config['minLevel'] = 10
+        config['unsharpMask'] = [2, 150, 5]
         return config
 
     @Plugin.listen('MessageCreate')
     def on_message_create(self, event):
+        if event.author == self.state.me:
+            return
         if self.config['enabled'] and 'ocr' in event.content:
             if self.config['minLevel'] > self.bot.get_level(event.author if not event.guild else event.guild.get_member(event.author)):
                 self.client.api.channels_messages_create(event.channel_id, '{} não possui permissão para usar essa funcionalidade.'.format(event.author.mention))
@@ -40,8 +79,9 @@ class OCR(Plugin):
                     if '>' in url:
                         idx = url.index('>')
                         url = url[:idx]+url[idx+1:]
-                    cache = self.storage.plugin.ensure('ocr_cache')
+                    cache = self.storage.plugin.ensure('ocr_cache') if self.config['cache'] else {}
                     m = None
+                    enhancedImg = None
                     if url in cache:
                         msg.edit('Encontrado processamento anterior em cache.')
                         m = cache[url]
@@ -52,29 +92,34 @@ class OCR(Plugin):
                             if 'image' in r.headers['Content-Type']:
                                 with Image.open(io.BytesIO(r.content)) as img:
                                     img.load()
-                                    m = img2str(img)
+                                    if self.config['processImage']:
+                                        if self.config['unsharpMask'][0]:
+                                            enhancedImg = img.filter(ImageFilter.UnsharpMask(self.config['unsharpMask'][0], self.config['unsharpMask'][1], self.config['unsharpMask'][2]))
+                                        if self.config['binarize']:
+                                            grayScale = ImageOps.grayscale(enhancedImg or img)
+                                            threshold = isoData(grayScale.histogram())
+                                            enhancedImg = grayScale.point(lambda pixel: pixel > threshold and 255)
+                                    m = img2str(enhancedImg or img)
                                     cache[url] = m
                             else:
                                 cache[url] = m
                     if m:
                         m = '`{}`\n'.format(url)+m
-                        if len(m) > 2000:
-                            msg.edit('Resultado acima do limite de caracteres para uma mensagem.')
-                            while len(m) > 2000:
-                                if '\n' in m[2000::-1]:
-                                    i = m[2000::-1].index('\n')                                
-                                    self.client.api.channels_messages_create(event.channel_id, m[:2000-i])
-                                    m = m[2000-i+1:]
-                                else:
-                                    self.client.api.channels_messages_create(event.channel_id, m[:2000])
-                                    m = m[2000:]
-                            self.client.api.channels_messages_create(event.channel_id, m)
-                        else:
-                            self.client.api.channels_messages_create(event.channel_id, m)
+                        while len(m) > 2000:
+                            if '\n' in m[2000::-1]:
+                                i = m[2000::-1].index('\n')                                
+                                self.client.api.channels_messages_create(event.channel_id, m[:2000-i])
+                                m = m[2000-i+1:]
+                            else:
+                                self.client.api.channels_messages_create(event.channel_id, m[:2000])
+                                m = m[2000:]
+                        self.client.api.channels_messages_create(event.channel_id, m)
                     else:
                         msg.edit('Falha ao processar imagem.')
-                else:
-                    msg.edit('Nenhuma imagem encontrada mensagem.')
+                    if self.config['uploadProcessedImage'] and enhancedImg:
+                        buffer = io.BytesIO()
+                        enhancedImg.save(buffer, 'png')
+                        self.client.api.channels_messages_create(event.channel_id, '', attachment=('result.png', buffer.getvalue()))
                 time.sleep(2)
                 msg.delete()
             except Exception as e:
@@ -85,14 +130,47 @@ class OCR(Plugin):
         self.config['enabled'] = not self.config['enabled']
         event.msg.reply('OCR foi {}.'.format('ativado' if self.config['enabled'] else 'desativado'))
                 
+    @Plugin.command('upload', level=100, group='OCR', description='Ativa/desativa o upload da imagem processada.')
+    def on_ocrtoggleupload_command(self, event):
+        self.config['uploadProcessedImage'] = not self.config['uploadProcessedImage']
+        event.msg.reply('Upload da imagem processada foi {}.'.format('ativado' if self.config['uploadProcessedImage'] else 'desativado'))
+                
+    @Plugin.command('process', level=100, group='OCR', description='Ativa/desativa o processamento de imagens.')
+    def on_ocrtoggleprocess_command(self, event):
+        self.config['processImage'] = not self.config['processImage']
+        event.msg.reply('Processamento de imagens foi {}.'.format('ativado' if self.config['processImage'] else 'desativado'))
+                
+    @Plugin.command('binarize', level=100, group='OCR', description='Ativa/desativa a binarização de imagens.')
+    def on_ocrtogglebinarize_command(self, event):
+        self.config['binarize'] = not self.config['binarize']
+        event.msg.reply('Binarização de imagens foi {}.'.format('ativado' if self.config['binarize'] else 'desativado'))
+                
+    @Plugin.command('cache', level=100, group='OCR', description='Ativa/desativa o uso do cache.')
+    def on_ocrtogglecache_command(self, event):
+        self.config['cache'] = not self.config['cache']
+        event.msg.reply('O uso do cache foi {}.'.format('ativado' if self.config['cache'] else 'desativado'))
+                
     @Plugin.command('status', level=10, group='OCR', description='Status atual do OCR.')
     def on_ocrstatus_command(self, event):
         event.msg.reply('OCR está {} no momento.'.format('ativado' if self.config['enabled'] else 'desativado'))
                 
+    @Plugin.command('clearCache', level=100, group='OCR', description='Limpa o cache de resultados do OCR.')
+    def on_ocrclearcache_command(self, event):
+        cache = self.storage.plugin.ensure('ocr_cache')
+        for key in cache.keys():
+            del cache[key]
+        event.msg.reply(':-1:' if len(cache) else ':+1:')
+        
     @Plugin.command('level', '[lvl:int]', level=100, group='OCR', description='Altera o nível de permissão mínimo para usar o OCR.')
     def on_ocrlevel_command(self, event, lvl=None):
         if lvl:
             self.config['minLevel'] = lvl
             event.msg.reply('Nível mínimo alterado para {}.'.format(lvl))
         else:
-            event.msg.reply('Nível mínimo atual: {}.'.format(self.config['minLevel']))            
+            event.msg.reply('Nível mínimo atual: {}.'.format(self.config['minLevel']))
+        
+    @Plugin.command('unsharpMask', '<radius:int> <percent:int> <threshold:int>', level=100, group='OCR', description='Altera os parâmetros do UnsharpMask aplicado na imagem.')
+    def on_ocrsharpness_command(self, event, radius, percent, threshold):
+        self.config['unsharpMask'] = [radius, percent, threshold]
+        event.msg.reply('Parâmetros do UnsharpMask alterados para ({}, {}, {}).'.format(radius, percent, threshold))
+            
