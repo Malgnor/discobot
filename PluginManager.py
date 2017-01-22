@@ -121,7 +121,7 @@ class PluginManager(Plugin):
         self.client.api.channels_typing(event.msg.channel_id)
         try:
             self.bot.add_plugin_module(plugin)
-        except e:
+        except Exception as e:
             event.msg.reply('Erro ao tentar adicionar plugin {}: {}.'.format(plugin, e))
             return
         

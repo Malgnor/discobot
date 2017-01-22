@@ -90,6 +90,7 @@ ENV/
 
 *.bat
 config/
+Fonts/
 myConfig.yaml
 myConfig.json
 storage.json
