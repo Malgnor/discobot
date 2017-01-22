@@ -41,7 +41,10 @@ class Painter(Plugin):
     def on_paintersize_command(self, event, width, height):
         ctx = self.userCtx.ensure(event.msg.author.id)
         ctx.update({'width': width, 'height': height})
-        event.msg.reply('`{}`'.format(ctx))
+        c = {}
+        c.update(ctx)
+        c.pop('texts', None)
+        event.msg.reply('`{}`'.format(c))
         
     @Plugin.command('background', '<color:str...>', level=10, group='Paint', description='Altera a cor do funda da imagem.')
     def on_painterbackground_command(self, event, color):
