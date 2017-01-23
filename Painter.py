@@ -19,13 +19,39 @@ class Painter(Plugin):
         if self.init:
             return self.storage.plugin.ensure('user')
         return None
-        
+
+    @Plugin.listen('MessageCreate')
+    def on_message_create(self, event):
+        if event.author == self.state.me:
+            return
+        ctx = self.userCtx.ensure(event.author.id)
+        if ctx.get('autotext', False):
+            try:
+                if not event.channel.type == 1:
+                    event.delete()
+                txt = event.with_proper_mentions
+                cfg = ctx.get('text', ['Fonts/arial.ttf', 64, 'white', 'rgba(0,0,0,0)'])
+                img = Image.new('RGBA', (1, 1), getrgb('white'))
+                draw = ImageDraw.Draw(img)
+                font = ImageFont.truetype(cfg[0], cfg[1])
+                tsize = draw.textsize(txt, font)
+                img = Image.new('RGBA', (tsize[0]+10, tsize[1]+10), getrgb(cfg[3]))
+                draw = ImageDraw.Draw(img)
+                draw.text((5, 5), txt, cfg[2], font)
+                del font
+                del draw
+                buffer = io.BytesIO()
+                img.save(buffer, 'png')
+                self.client.api.channels_messages_create(event.channel_id, '', attachment=('text.png', buffer.getvalue()))
+            except Exception as e:
+                self.client.api.channels_messages_create(event.channel_id, '[ERRO]{}'.format(e))
+                
     @Plugin.command('draw', level=10, group='Paint', description='Desenha uma imagem.')
     def on_painterdraw_command(self, event):
         self.client.api.channels_typing(event.msg.channel_id)
         ctx = self.userCtx.ensure(event.msg.author.id)
         try:
-            img = Image.new('RGBA', (ctx.get('width', 100), ctx.get('height', 100)), getrgb(ctx.get('bgcolor', 'rgba(0,0,0,0)')))
+            img = Image.new('RGBA', (ctx.get('width', 100), ctx.get('height', 100)), getrgb(ctx.get('bgColor', 'rgba(0,0,0,0)')))
             draw = ImageDraw.Draw(img)
             for text in ctx.get('texts', []):
                 font = ImageFont.truetype(text[3], text[4])
@@ -43,7 +69,7 @@ class Painter(Plugin):
         self.client.api.channels_typing(channelID)
         ctx = self.userCtx.ensure(event.msg.author.id)
         try:
-            img = Image.new('RGBA', (ctx.get('width', 100), ctx.get('height', 100)), getrgb(ctx.get('bgcolor', 'rgba(0,0,0,0)')))
+            img = Image.new('RGBA', (ctx.get('width', 100), ctx.get('height', 100)), getrgb(ctx.get('bgColor', 'rgba(0,0,0,0)')))
             draw = ImageDraw.Draw(img)
             for text in ctx.get('texts', []):
                 font = ImageFont.truetype(text[3], text[4])
@@ -68,7 +94,7 @@ class Painter(Plugin):
     @Plugin.command('background', '<color:str...>', level=10, group='Paint', description='Altera a cor do funda da imagem.')
     def on_painterbackground_command(self, event, color):
         ctx = self.userCtx.ensure(event.msg.author.id)
-        ctx.update({'bgcolor': color})
+        ctx.update({'bgColor': color})
         c = {}
         c.update(ctx)
         c.pop('texts', None)
@@ -77,7 +103,7 @@ class Painter(Plugin):
     @Plugin.command('text add', '<x:int> <y:int> <color:str> <font:str> <size:int> <text:str...>', level=10, group='Paint', description='Adiciona texto na imagem.')
     def on_paintertextadd_command(self, event, x, y, color, font, size, text):
         try:
-            font = [f[0]+f[1] for f in self.fonts if font.lower() in f[0].lower()]
+            font = [f[0]+f[1] for f in self.fonts if font.lower() in ''.join(f[0].lower().split(' '))]
             if len(font) == 0:
                 event.msg.reply('Fonte desconhecida.')
                 return
@@ -87,11 +113,13 @@ class Painter(Plugin):
             texts = ctx.get('texts', [])
             texts.append([x, y, color, font, size, text])
             ctx.update({'texts': texts})
-            tsize = fnt.getsize(text)
+            draw = ImageDraw.Draw(Image.new('RGB', (1, 1), getrgb('white')))
+            tsize = draw.textsize(text, fnt)
             event.msg.reply('Tamanho do texto em pixels: `{}`\nTamanho recomendado para a imagem: `{}`'.format(tsize, (x+tsize[0], y+tsize[1])))
             del fnt
+            del draw
         except Exception as e:
-            event.msg.reply('[ERRO]{}'.format(e))        
+            event.msg.reply('[ERRO]{}'.format(e))
         
     @Plugin.command('text clear', level=10, group='Paint', description='Remove todos os textos da imagem.')
     def on_paintertextclear_command(self, event):
@@ -101,6 +129,27 @@ class Painter(Plugin):
         c.update(ctx)
         c.pop('texts', None)
         event.msg.reply('`{}`'.format(c))
+        
+    @Plugin.command('text config', '<bgColor:str> <fontColor:str> <font:str> <size:int>', level=10, group='Paint', description='Configuração do texto para uso em outros comandos.')
+    def on_paintertextconfig_command(self, event, bgColor, fontColor, font, size):
+        try:
+            font = [f[0]+f[1] for f in self.fonts if font.lower() in ''.join(f[0].lower().split(' '))]
+            if len(font) == 0:
+                event.msg.reply('Fonte desconhecida.')
+                return
+            font = 'Fonts'+os.path.sep+font[0]
+            cfg = [font, size, fontColor, bgColor]
+            ctx = self.userCtx.ensure(event.msg.author.id)
+            ctx.update({'text': cfg})
+            event.msg.reply('Configuração do texto: `{}`'.format(cfg))
+        except Exception as e:
+            event.msg.reply('[ERRO]{}'.format(e))
+        
+    @Plugin.command('text toggle', level=10, group='Paint', description='Ativa/desativa a autosubstituição da mensagem por imagem.')
+    def on_paintertexttoggle_command(self, event):
+        ctx = self.userCtx.ensure(event.msg.author.id)
+        ctx['autotext'] = not ctx.get('autotext', False)
+        event.msg.reply('Autosubstituição foi {}.'.format('ativada' if ctx['autotext'] else 'desativada'))
         
     @Plugin.command('fonts', level=10, group='Paint', description='Lista as fontes de texto disponíveis.')
     def on_painterfonts_command(self, event):
@@ -117,37 +166,3 @@ class Painter(Plugin):
         r += '```'
         event.msg.reply(r)
         
-    @Plugin.command('sample', '[fontColor:str] [bgColor:str] [col:int]', level=10, group='Paint', description='Desenha uma amostra com todas as fontes disponíveis.')
-    def on_paintersample_command(self, event, fontColor='black', bgColor='white', col=5):
-        self.client.api.channels_typing(event.msg.channel_id)
-        try:
-            fontsPerCol = int(round(len(self.fonts)/float(col)))
-            texts = []
-            total = 0
-            x = 5
-            y = 5
-            xMax = x
-            yMax = y
-            for font in self.fonts:
-                total += 1 
-                f = ImageFont.truetype(font[0]+font[1], 32)
-                t = '{} - ABC123abc!@# - {}'.format(total, font[0])
-                ts = f.getsize(t)
-                texts.append([(x, y), t, f])
-                y += ts[1]+10
-                xMax = max(xMax, x+ts[0]+5)
-                if total % fontsPerCol == 0:
-                    yMax = max(yMax, y)
-                    y = 5
-                    x = xMax + 5
-            img = Image.new('RGBA', (xMax, yMax), getrgb(bgColor))
-            draw = ImageDraw.Draw(img)
-            for text in texts:
-                draw.text(text[0], text[1], fontColor, text[2])
-                del text[2]
-            del draw
-            buffer = io.BytesIO()
-            img.save(buffer, 'png')
-            event.msg.reply('', attachment=('sample.png', buffer.getvalue()))
-        except Exception as e:
-            event.msg.reply('[ERRO]{}'.format(e))
