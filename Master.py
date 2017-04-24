@@ -4,7 +4,7 @@ from disco.bot import Bot, Plugin
 from disco.bot.command import CommandLevels
 from disco.types.user import Status, Game
 from Utils import AttachmentToEmbed, EmbedImageFromUrl
-import disco
+import disco, json, re, ntpath, requests
 
 class Master(Plugin):
     @staticmethod
@@ -39,7 +39,51 @@ class Master(Plugin):
         if event.channel.type == 1 and self.config['channelDMId']:
             self.client.api.channels_messages_create(self.config['channelDMId'], '[DM]{}: {}'.format(event.author.mention, event.content), event.nonce, event.tts, None, AttachmentToEmbed(event.attachments))
         if event.author.id in self.config['copyCatId']:
-            self.client.api.channels_messages_create(event.channel_id, event.content, event.nonce, event.tts, None, AttachmentToEmbed(event.attachments))            
+            self.client.api.channels_messages_create(event.channel_id, event.content, event.nonce, event.tts, None, AttachmentToEmbed(event.attachments))   
+        if 'debug' in event.content:
+            self.client.api.channels_messages_create(event.channel_id, '```json\n{}```'.format(json.dumps({
+            'ID': event.id,
+            'Channel_ID': event.channel_id,
+            'Author': event.author.mention,
+            'Mentions': [v.mention for v in event.mentions.values()],
+            'Nonce': event.nonce,
+            'TTS': event.tts,
+            'Embeds': [v.to_dict() for v in event.embeds],
+            'Attachments': [v.to_dict() for v in event.attachments.values()]}
+            , indent=4)))
+        if 'getfb' in event.content:
+            try:
+                urls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', event.content)
+                bases = [ntpath.basename(v) for v in urls]
+                b = [v[v.index('_')+1:] for v in bases if '_' in v]
+                b2 = [v[:v.index('_')] for v in b if '_' in v]
+                if not len(b2):
+                    return
+                furl = ['https://www.facebook.com/photo.php?fbid={}'.format(v) for v in b2]
+                r = [requests.get(v) for v in furl]
+                rr = [v for v in r if v.status_code == 200 and 'actor_id' in v.text]
+                f = [v.url for v in r if not v in rr]
+                id = [v.text[v.text.index('actor_id')+11:v.text.index('story_id')-3] for v in rr]
+                r2 = [requests.get('https://www.facebook.com/{}'.format(v)) for v in id]
+                rurl = [v.url for v in r2 if v.status_code == 200]
+                if len(rurl):
+                    self.client.api.channels_messages_create(event.channel_id, '\n'.join(rurl))
+                elif len(id):
+                    self.client.api.channels_messages_create(event.channel_id, '\n'.join(['https://www.facebook.com/{}'.format(v) for v in id]))
+                if len(f):
+                    self.client.api.channels_messages_create(event.channel_id, 'Foto(s) privada(s): {}'.format('\n'.join(f)))
+                # self.client.api.channels_messages_create(event.channel_id, '```json\n{}```'.format(json.dumps({
+                # 'Urls': urls,
+                # 'Bases': bases,
+                # 'B': b,
+                # 'B2': b2,
+                # 'Furl': furl,
+                # 'Id': id,
+                # 'Rurl': rurl
+                # }, indent=4)))
+            except Exception as e:
+                self.client.api.channels_messages_create(event.channel_id, 'Error: {}'.format(e))            
+            
 
     @Plugin.listen('TypingStart')
     def on_typing_start(self, event):
@@ -88,6 +132,10 @@ class Master(Plugin):
     def on_saychannel_command(self, event, cid, content):
         self.client.api.channels_messages_create(cid, content)
 
+    @Plugin.command('editmsg', '<cid:snowflake> <mid:snowflake> <content:str...>', level=50, description='Edita uma mensagem.')
+    def on_editmsg_command(self, event, cid, mid, content):
+        self.client.api.channels_messages_modify(cid, mid, content)
+
     @Plugin.command('faketype', '<cid:snowflake>', level=50, description='Manda evento de \'digitando\' para um canal.')
     def on_faketype_command(self, event, cid):
         self.client.api.channels_typing(cid)
@@ -103,6 +151,10 @@ class Master(Plugin):
             m += '{}:{}\n'.format(role.name, role.id)
         m += '```'
         event.msg.reply(m)
+
+    @Plugin.command('c', '<content:str...>', level=10)
+    def on_echo_command(self, event, content):
+        event.msg.reply('```\n'+content+'```')
         
     @Plugin.command('info', '<query:str...>', level=10, description='Mostra informações sobre um usuário.')
     def on_info_command(self, event, query):
@@ -138,27 +190,4 @@ class Master(Plugin):
             event.msg.reply(('```\n{}\n```'.format(
                 '\n'.join(parts))
             ), embed=EmbedImageFromUrl(user.avatar_url))
-        
-    # @Plugin.command('test', group='test', level=100)
-    # def on_test1_command(self, event):
-        # pass
-        
-    # @Plugin.command('tag', group='tag', level=100)
-    # def on_test2_command(self, event):
-        # pass
             
-    # @Plugin.command('boots', group='boots', level=100)
-    # def on_test3_command(self, event):
-        # pass
-        
-    # @Plugin.command('boat', group='boat', level=100)
-    # def on_test4_command(self, event):
-        # pass
-            
-    # @Plugin.command('work', group='work', level=100)
-    # def on_test5_command(self, event):
-        # pass
-        
-    # @Plugin.command('word', group='word', level=100)
-    # def on_test6_command(self, event):
-        # pass

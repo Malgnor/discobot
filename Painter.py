@@ -3,7 +3,7 @@
 from disco.bot import Bot, Plugin
 from PIL import Image, ImageOps, ImageFilter, ImageSequence, ImageDraw, ImageFont
 from PIL.ImageColor import getrgb
-import io, os
+import io, os, re
   
 class Painter(Plugin):
     def __init__(self, bot, config):
@@ -19,18 +19,29 @@ class Painter(Plugin):
         if self.init:
             return self.storage.plugin.ensure('user')
         return None
+        
+    @property
+    def channelCtx(self):
+        if self.init:
+            return self.storage.plugin.ensure('channel')
+        return None
 
     @Plugin.listen('MessageCreate')
     def on_message_create(self, event):
         if event.author == self.state.me:
             return
-        ctx = self.userCtx.ensure(event.author.id)
-        if ctx.get('autotext', False):
+        ctxUser = self.userCtx.ensure(event.author.id)
+        ctxChannel = self.channelCtx.ensure(event.channel_id)
+        cfg = None
+        if ctxUser.get('autotext', False):
+            cfg = ctxUser.get('text', ['Fonts/arial.ttf', 64, 'white', 'rgba(0,0,0,0)'])
+        elif ctxChannel.get('autotext', False):
+            cfg = ctxChannel.get('text', ['Fonts/arial.ttf', 64, 'white', 'rgba(0,0,0,0)'])
+        if cfg:
             try:
                 if not event.channel.type == 1:
                     event.delete()
                 txt = event.with_proper_mentions
-                cfg = ctx.get('text', ['Fonts/arial.ttf', 64, 'white', 'rgba(0,0,0,0)'])
                 img = Image.new('RGBA', (1, 1), getrgb('white'))
                 draw = ImageDraw.Draw(img)
                 font = ImageFont.truetype(cfg[0], cfg[1])
@@ -42,7 +53,8 @@ class Painter(Plugin):
                 del draw
                 buffer = io.BytesIO()
                 img.save(buffer, 'png')
-                self.client.api.channels_messages_create(event.channel_id, '', attachment=('text.png', buffer.getvalue()))
+                reurls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', event.content)
+                self.client.api.channels_messages_create(event.channel_id, '[{}]:\n{}'.format(event.author, '\n'.join(reurls)), attachment=('text.png', buffer.getvalue()))
             except Exception as e:
                 self.client.api.channels_messages_create(event.channel_id, '[ERRO]{}'.format(e))
                 
@@ -150,6 +162,50 @@ class Painter(Plugin):
         ctx = self.userCtx.ensure(event.msg.author.id)
         ctx['autotext'] = not ctx.get('autotext', False)
         event.msg.reply('Autosubstituição foi {}.'.format('ativada' if ctx['autotext'] else 'desativada'))
+        
+    @Plugin.command('text configUser', '<bgColor:str> <fontColor:str> <font:str> <size:int> <userID:snowflake>', level=100, group='Paint', description='Configuração do texto para uso em outros comandos.')
+    def on_paintertextconfiguser_command(self, event, bgColor, fontColor, font, size, userID):
+        try:
+            font = [f[0]+f[1] for f in self.fonts if font.lower() in ''.join(f[0].lower().split(' '))]
+            if len(font) == 0:
+                event.msg.reply('Fonte desconhecida.')
+                return
+            font = 'Fonts'+os.path.sep+font[0]
+            cfg = [font, size, fontColor, bgColor]
+            ctx = self.userCtx.ensure(userID)
+            ctx.update({'text': cfg})
+            event.msg.reply('Configuração do texto: `{}`'.format(cfg))
+        except Exception as e:
+            event.msg.reply('[ERRO]{}'.format(e))
+        
+    @Plugin.command('text toggleUser', '<userID:snowflake>', level=100, group='Paint', description='Ativa/desativa a autosubstituição da mensagem por imagem.')
+    def on_paintertexttoggleuser_command(self, event, userID):
+        ctx = self.userCtx.ensure(userID)
+        ctx['autotext'] = not ctx.get('autotext', False)
+        event.msg.reply('Autosubstituição foi {}.'.format('ativada' if ctx['autotext'] else 'desativada'))
+        
+    @Plugin.command('text configChannel', '<bgColor:str> <fontColor:str> <font:str> <size:int> <channelID:snowflake>', level=100, group='Paint', description='Configuração do texto para uso em outros comandos.')
+    def on_paintertextconfigchannel_command(self, event, bgColor, fontColor, font, size, channelID):
+        try:
+            font = [f[0]+f[1] for f in self.fonts if font.lower() in ''.join(f[0].lower().split(' '))]
+            if len(font) == 0:
+                event.msg.reply('Fonte desconhecida.')
+                return
+            font = 'Fonts'+os.path.sep+font[0]
+            cfg = [font, size, fontColor, bgColor]
+            ctx = self.channelCtx.ensure(channelID)
+            ctx.update({'text': cfg})
+            event.msg.reply('Configuração do texto: `{}`'.format(cfg))
+        except Exception as e:
+            event.msg.reply('[ERRO]{}'.format(e))
+        
+    @Plugin.command('text toggleChannel', '<channelID:snowflake> [content:str...]', level=100, group='Paint', description='Ativa/desativa a autosubstituição da mensagem por imagem.')
+    def on_paintertexttogglechannel_command(self, event, channelID, content=None):
+        ctx = self.channelCtx.ensure(channelID)
+        ctx['autotext'] = not ctx.get('autotext', False)
+        event.msg.reply('Autosubstituição foi {}.'.format('ativada' if ctx['autotext'] else 'desativada'))
+        if content:
+            self.client.api.channels_messages_create(channelID, content)
         
     @Plugin.command('fonts', level=10, group='Paint', description='Lista as fontes de texto disponíveis.')
     def on_painterfonts_command(self, event):
