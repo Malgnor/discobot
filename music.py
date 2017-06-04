@@ -3,6 +3,8 @@ from disco.bot.command import CommandError
 from disco.voice.player import Player
 from disco.voice.playable import YoutubeDLInput, BufferedOpusEncoderPlayable
 from disco.voice.client import VoiceException
+from six.moves import queue
+from random import shuffle
 
 def on_start_play(guild_member):
     def _on_start_play(item):
@@ -12,9 +14,10 @@ def on_start_play(guild_member):
         guild_member.set_nickname(nickname)
     return _on_start_play
 
-def on_stop_play(guild_member):
+def on_stop_play(player, playlist):
     def _on_stop_play(item):
-        guild_member.set_nickname(None)
+        if playlist and not playlist.empty():
+            player.queue.put(playlist.get().pipe(BufferedOpusEncoderPlayable))
     return _on_stop_play
 
 def on_disconnect(guild_member):
@@ -31,6 +34,7 @@ class MusicPlugin(Plugin):
     def load(self, ctx):
         super(MusicPlugin, self).load(ctx)
         self.guilds = {}
+        self.playlist = {}
 
     # @Plugin.listen('VoiceStateUpdate')
     # def on_voice_update(self, event):
@@ -52,17 +56,26 @@ class MusicPlugin(Plugin):
 
         player = Player(client)
         self.guilds[event.guild.id] = player
+        self.playlist[event.guild.id] = queue.Queue()
         member = event.guild.get_member(self.state.me.id)
         player.events.on(player.Events.START_PLAY, on_start_play(member))
-        # player.events.on(player.Events.STOP_PLAY, on_stop_play(member))
+        player.events.on(player.Events.STOP_PLAY, on_stop_play(player, self.playlist[event.guild.id]))
         player.events.on(player.Events.DISCONNECT, on_disconnect(member))
         player.complete.wait()
-        del self.guilds[event.guild.id]
+        if event.guild.id in self.guilds:
+            del self.guilds[event.guild.id]
+        if event.guild.id in self.playlist:
+            del self.playlist[event.guild.id]
 
     def get_player(self, guild_id):
         if guild_id not in self.guilds:
             raise CommandError("I'm not currently playing music here.")
         return self.guilds.get(guild_id)
+
+    def get_playlist(self, guild_id):
+        if guild_id not in self.playlist:
+            raise CommandError("I'm not currently playing music here.")
+        return self.playlist.get(guild_id)
 
     @Plugin.command('leave')
     def on_leave(self, event):
@@ -70,6 +83,8 @@ class MusicPlugin(Plugin):
         player.disconnect()
         if event.guild.id in self.guilds:
             del self.guilds[event.guild.id]
+        if event.guild.id in self.playlist:
+            del self.playlist[event.guild.id]
 
     @Plugin.command('play', '<url:str>')
     def on_play(self, event, url):
@@ -78,13 +93,20 @@ class MusicPlugin(Plugin):
 
     @Plugin.command('playl', '<url:str>')
     def on_playlist(self, event, url):
-        for item in YoutubeDLInput.many(remove_angular_brackets(url), False):
-            self.get_player(event.guild.id).queue.put(item.pipe(BufferedOpusEncoderPlayable))
+        items = list(YoutubeDLInput.many(remove_angular_brackets(url)))
+        self.get_player(event.guild.id).queue.put(items[0].pipe(BufferedOpusEncoderPlayable))
+        self.get_player(event.guild.id).queue.put(items[1].pipe(BufferedOpusEncoderPlayable))
+        for item in items[2:]:
+            self.get_playlist(event.guild.id).put(item)
 
     @Plugin.command('playlr', '<url:str>')
     def on_playlistrandom(self, event, url):
-        for item in YoutubeDLInput.many(remove_angular_brackets(url)):
-            self.get_player(event.guild.id).queue.put(item.pipe(BufferedOpusEncoderPlayable))
+        items = list(YoutubeDLInput.many(remove_angular_brackets(url)))
+        shuffle(items)
+        self.get_player(event.guild.id).queue.put(items[0].pipe(BufferedOpusEncoderPlayable))
+        self.get_player(event.guild.id).queue.put(items[1].pipe(BufferedOpusEncoderPlayable))
+        for item in items[2:]:
+            self.get_playlist(event.guild.id).put(item)
 
     @Plugin.command('pause')
     def on_pause(self, event):
