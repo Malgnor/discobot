@@ -26,6 +26,7 @@ class MusicPlayer(Player):
 
         self.events.on(self.Events.START_PLAY, self.on_start_play)
         self.events.on(self.Events.STOP_PLAY, self.on_stop_play)
+        self.events.on(self.Events.EMPTY_QUEUE, self.on_empty_queue)
         self.events.on(self.Events.DISCONNECT, self.on_disconnect)
         self.client.packets.on(VoiceOPCode.SPEAKING, self.on_speaking)
 
@@ -35,9 +36,15 @@ class MusicPlayer(Player):
             nickname = nickname[:29]+'...'
         self.guild_member.set_nickname(nickname)
 
-    def on_stop_play(self, item):
-        if self.playlist and not self.playlist.empty():
+    def on_stop_play(self, _):
+        if not self.playlist.empty():
             self.queue.put(self.playlist.get().pipe(BufferedOpusEncoderPlayable))
+
+    def on_empty_queue(self):
+        if not self.playlist.empty():
+            self.queue.put(self.playlist.get().pipe(BufferedOpusEncoderPlayable))
+        else:
+            self.guild_member.set_nickname(self.nick)
 
     def on_disconnect(self):
         self.guild_member.set_nickname(self.nick)
@@ -61,7 +68,7 @@ class MusicPlayer(Player):
     def autopause(self, value):
         self.__autopause = value
         if not value:
-            self.resume
+            self.resume()
 
 class MusicPlugin(Plugin):
     def load(self, ctx):
@@ -77,22 +84,22 @@ class MusicPlugin(Plugin):
                     player.deaf = event.state.deaf
                     if player.now_playing:
                         player.skip()
-            except CommandError as e:
+            except CommandError:
                 pass
 
     @Plugin.command('join')
     def on_join(self, event):
         if event.guild.id in self.guilds:
-            return event.msg.reply("I'm already playing music here.")
+            return event.msg.reply("Já estou tocando música aqui.")
 
         state = event.guild.get_member(event.author).get_voice_state()
         if not state:
-            return event.msg.reply('You must be connected to voice to use that command.')
+            return event.msg.reply('Você precisa estar conectado em um canal de voz para usar este comando.')
 
         try:
             client = state.channel.connect()
         except VoiceException as e:
-            return event.msg.reply('Failed to connect to voice: `{}`'.format(e))
+            return event.msg.reply('Falha ao conectar no canal de voz: `{}`'.format(e))
 
         self.guilds[event.guild.id] = MusicPlayer(client, event.guild.get_member(self.state.me.id), event.guild)
 
