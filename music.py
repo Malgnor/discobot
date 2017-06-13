@@ -2,11 +2,10 @@ from random import shuffle
 from disco.bot import Plugin
 from disco.bot.command import CommandError
 from disco.voice.player import Player
-from disco.voice.playable import YoutubeDLInput, BufferedOpusEncoderPlayable
+from disco.voice.playable import YoutubeDLInput, BufferedOpusEncoderPlayable, UnbufferedOpusEncoderPlayable
 from disco.voice.client import VoiceException
 from disco.voice.packets import VoiceOPCode
 from six.moves import queue
-
 
 def remove_angular_brackets(url):
     if url[0] is '<' and url[-1] is '>':
@@ -22,7 +21,11 @@ class MusicPlayer(Player):
         self.playlist = queue.Queue()
         self.speaking = {}
         self.deaf = False
-        self.autopause = True
+        self.autopause = False
+        self.autovolume = True
+        self.volume = 0.1
+        self.ducking_volume = 0.1
+        self.anyonespeaking = False
 
         self.events.on(self.Events.START_PLAY, self.on_start_play)
         self.events.on(self.Events.STOP_PLAY, self.on_stop_play)
@@ -35,14 +38,15 @@ class MusicPlayer(Player):
         if len(nickname) > 32:
             nickname = nickname[:29]+'...'
         self.guild_member.set_nickname(nickname)
+        self.updateVolume()
 
     def on_stop_play(self, _):
         if not self.playlist.empty():
-            self.queue.put(self.playlist.get().pipe(BufferedOpusEncoderPlayable))
+            self.queue.put(self.playlist.get().pipe(UnbufferedOpusEncoderPlayable))
 
     def on_empty_queue(self):
         if not self.playlist.empty():
-            self.queue.put(self.playlist.get().pipe(BufferedOpusEncoderPlayable))
+            self.queue.put(self.playlist.get().pipe(UnbufferedOpusEncoderPlayable))
         else:
             self.guild_member.set_nickname(self.nick)
 
@@ -50,15 +54,23 @@ class MusicPlayer(Player):
         self.guild_member.set_nickname(self.nick)
 
     def on_speaking(self, data):
-        if not self.autopause:
+        if (not self.autopause) and (not self.autovolume):
             return
+
         if not self.guild.get_member(data['user_id']).get_voice_state().channel is self.client.channel:
             return
+
         self.speaking[data['user_id']] = data['speaking']
-        if any(self.speaking.values()):
-            self.pause()
-        else:
-            self.resume()
+
+        self.anyonespeaking = any(self.speaking.values())
+
+        if self.autovolume:
+            self.updateVolume()
+        elif self.autopause:
+            if self.anyonespeaking:
+                self.pause()
+            else:
+                self.resume()
 
     @property
     def autopause(self):
@@ -69,6 +81,34 @@ class MusicPlayer(Player):
         self.__autopause = value
         if not value:
             self.resume()
+        else:
+            self.autovolume = False
+
+    @property
+    def autovolume(self):
+        return self.__autovolume
+
+    @autovolume.setter
+    def autovolume(self, value):
+        self.__autovolume = value
+        if value:
+            self.autopause = False
+    
+    @property
+    def volume(self):
+        return self.__base_volume
+
+    @volume.setter
+    def volume(self, value):
+        self.__base_volume = value
+        self.updateVolume()
+
+    def updateVolume(self):
+        if isinstance(self.now_playing, UnbufferedOpusEncoderPlayable):
+            if self.autovolume and self.anyonespeaking:
+                self.now_playing.volume = self.__base_volume * self.ducking_volume
+            else:
+                self.now_playing.volume = self.__base_volume
 
 class MusicPlugin(Plugin):
     def load(self, ctx):
@@ -122,14 +162,19 @@ class MusicPlugin(Plugin):
 
     @Plugin.command('play', '<url:str>')
     def on_play(self, event, url):
-        item = YoutubeDLInput(remove_angular_brackets(url)).pipe(BufferedOpusEncoderPlayable)
+        item = YoutubeDLInput(remove_angular_brackets(url)).pipe(UnbufferedOpusEncoderPlayable)
+        self.get_player(event.guild.id).queue.put(item)
+
+    @Plugin.command('playtest', '<url:str>')
+    def on_playtest(self, event, url):
+        item = YoutubeDLInput(remove_angular_brackets(url)).pipe(UnbufferedOpusEncoderPlayable)
         self.get_player(event.guild.id).queue.put(item)
 
     @Plugin.command('playl', '<url:str>')
     def on_playlist(self, event, url):
         items = list(YoutubeDLInput.many(remove_angular_brackets(url)))
-        self.get_player(event.guild.id).queue.put(items[0].pipe(BufferedOpusEncoderPlayable))
-        self.get_player(event.guild.id).queue.put(items[1].pipe(BufferedOpusEncoderPlayable))
+        self.get_player(event.guild.id).queue.put(items[0].pipe(UnbufferedOpusEncoderPlayable))
+        self.get_player(event.guild.id).queue.put(items[1].pipe(UnbufferedOpusEncoderPlayable))
         for item in items[2:]:
             self.get_player(event.guild.id).playlist.put(item)
 
@@ -137,8 +182,8 @@ class MusicPlugin(Plugin):
     def on_playlistrandom(self, event, url):
         items = list(YoutubeDLInput.many(remove_angular_brackets(url)))
         shuffle(items)
-        self.get_player(event.guild.id).queue.put(items[0].pipe(BufferedOpusEncoderPlayable))
-        self.get_player(event.guild.id).queue.put(items[1].pipe(BufferedOpusEncoderPlayable))
+        self.get_player(event.guild.id).queue.put(items[0].pipe(UnbufferedOpusEncoderPlayable))
+        self.get_player(event.guild.id).queue.put(items[1].pipe(UnbufferedOpusEncoderPlayable))
         for item in items[2:]:
             self.get_player(event.guild.id).playlist.put(item)
 
@@ -166,3 +211,19 @@ class MusicPlugin(Plugin):
     def on_autopause(self, event):
         self.get_player(event.guild.id).autopause = not self.get_player(event.guild.id).autopause
         return event.msg.reply('Autopause foi {}.'.format('ativado' if self.get_player(event.guild.id).autopause else 'desativado'))
+
+    @Plugin.command('autovolume', '[vol:float]')
+    def on_autovolume(self, event, vol=None):
+        self.get_player(event.guild.id).autovolume = not self.get_player(event.guild.id).autovolume
+        if vol:
+            self.get_player(event.guild.id).ducking_volume = vol
+        return event.msg.reply('Autovolume foi {}. ({})'.format('ativado' if self.get_player(event.guild.id).autovolume else 'desativado', self.get_player(event.guild.id).ducking_volume))
+
+    @Plugin.command('volume', '[vol:float]')
+    def on_volume(self, event, vol=None):
+        player = self.get_player(event.guild.id)
+        if vol:
+            player.volume = vol
+            return
+        else:
+            return event.msg.reply('Volume atual: {}'.format(player.volume))
