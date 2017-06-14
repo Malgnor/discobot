@@ -7,10 +7,12 @@ from disco.voice.client import VoiceException
 from disco.voice.packets import VoiceOPCode
 from six.moves import queue
 
+
 def remove_angular_brackets(url):
     if url[0] is '<' and url[-1] is '>':
         return url[1:-1]
     return url
+
 
 class MusicPlayer(Player):
     def __init__(self, client, guild_member, guild):
@@ -33,19 +35,22 @@ class MusicPlayer(Player):
         self.client.packets.on(VoiceOPCode.SPEAKING, self.on_speaking)
 
     def on_start_play(self, item):
-        nickname = '🎵 ' + (item.info.get('alt_title') or item.info.get('title', ''))
+        nickname = '🎵 ' + (item.info.get('alt_title')
+                           or item.info.get('title', ''))
         if len(nickname) > 32:
-            nickname = nickname[:29]+'...'
+            nickname = nickname[:29] + '...'
         self.guild_member.set_nickname(nickname)
         self.update_volume()
 
     def on_stop_play(self, _):
         if not self.playlist.empty():
-            self.queue.put(self.playlist.get().pipe(UnbufferedOpusEncoderPlayable))
+            self.queue.put(self.playlist.get().pipe(
+                UnbufferedOpusEncoderPlayable))
 
     def on_empty_queue(self):
         if not self.playlist.empty():
-            self.queue.put(self.playlist.get().pipe(UnbufferedOpusEncoderPlayable))
+            self.queue.put(self.playlist.get().pipe(
+                UnbufferedOpusEncoderPlayable))
         else:
             self.guild_member.set_nickname(self.nick)
 
@@ -118,6 +123,7 @@ class MusicPlayer(Player):
             else:
                 self.now_playing.volume = self.__base_volume
 
+
 class MusicPlugin(Plugin):
     def load(self, ctx):
         super(MusicPlugin, self).load(ctx)
@@ -147,7 +153,8 @@ class MusicPlugin(Plugin):
         except VoiceException as e:
             return event.msg.reply('Falha ao conectar no canal de voz: `{}`'.format(e))
 
-        self.guilds[event.guild.id] = MusicPlayer(client, event.guild.get_member(self.state.me.id), event.guild)
+        self.guilds[event.guild.id] = MusicPlayer(
+            client, event.guild.get_member(self.state.me.id), event.guild)
 
         self.guilds[event.guild.id].complete.wait()
 
@@ -168,19 +175,17 @@ class MusicPlugin(Plugin):
 
     @Plugin.command('play', '<url:str>')
     def on_play(self, event, url):
-        item = YoutubeDLInput(remove_angular_brackets(url)).pipe(UnbufferedOpusEncoderPlayable)
-        self.get_player(event.guild.id).queue.put(item)
-
-    @Plugin.command('playtest', '<url:str>')
-    def on_playtest(self, event, url):
-        item = YoutubeDLInput(remove_angular_brackets(url)).pipe(UnbufferedOpusEncoderPlayable)
+        item = YoutubeDLInput(remove_angular_brackets(
+            url)).pipe(UnbufferedOpusEncoderPlayable)
         self.get_player(event.guild.id).queue.put(item)
 
     @Plugin.command('playl', '<url:str>')
     def on_playlist(self, event, url):
         items = list(YoutubeDLInput.many(remove_angular_brackets(url)))
-        self.get_player(event.guild.id).queue.put(items[0].pipe(UnbufferedOpusEncoderPlayable))
-        self.get_player(event.guild.id).queue.put(items[1].pipe(UnbufferedOpusEncoderPlayable))
+        self.get_player(event.guild.id).queue.put(
+            items[0].pipe(UnbufferedOpusEncoderPlayable))
+        self.get_player(event.guild.id).queue.put(
+            items[1].pipe(UnbufferedOpusEncoderPlayable))
         for item in items[2:]:
             self.get_player(event.guild.id).playlist.put(item)
 
@@ -188,8 +193,10 @@ class MusicPlugin(Plugin):
     def on_playlistrandom(self, event, url):
         items = list(YoutubeDLInput.many(remove_angular_brackets(url)))
         shuffle(items)
-        self.get_player(event.guild.id).queue.put(items[0].pipe(UnbufferedOpusEncoderPlayable))
-        self.get_player(event.guild.id).queue.put(items[1].pipe(UnbufferedOpusEncoderPlayable))
+        self.get_player(event.guild.id).queue.put(
+            items[0].pipe(UnbufferedOpusEncoderPlayable))
+        self.get_player(event.guild.id).queue.put(
+            items[1].pipe(UnbufferedOpusEncoderPlayable))
         for item in items[2:]:
             self.get_player(event.guild.id).playlist.put(item)
 
@@ -215,12 +222,14 @@ class MusicPlugin(Plugin):
 
     @Plugin.command('autopause')
     def on_autopause(self, event):
-        self.get_player(event.guild.id).autopause = not self.get_player(event.guild.id).autopause
+        self.get_player(event.guild.id).autopause = not self.get_player(
+            event.guild.id).autopause
         return event.msg.reply('Autopause foi {}.'.format('ativado' if self.get_player(event.guild.id).autopause else 'desativado'))
 
     @Plugin.command('autovolume')
     def on_autovolume(self, event):
-        self.get_player(event.guild.id).autovolume = not self.get_player(event.guild.id).autovolume
+        self.get_player(event.guild.id).autovolume = not self.get_player(
+            event.guild.id).autovolume
         return event.msg.reply('Autovolume foi {}.'.format('ativado' if self.get_player(event.guild.id).autovolume else 'desativado'))
 
     @Plugin.command('volume', '[vol:float]')
@@ -228,7 +237,6 @@ class MusicPlugin(Plugin):
         player = self.get_player(event.guild.id)
         if vol:
             player.volume = vol
-            return
         else:
             return event.msg.reply('Volume atual: {}'.format(player.volume))
 
@@ -237,6 +245,5 @@ class MusicPlugin(Plugin):
         player = self.get_player(event.guild.id)
         if vol:
             player.ducking_volume = vol
-            return
         else:
             return event.msg.reply('Atenuação atual: {}'.format(player.ducking_volume))

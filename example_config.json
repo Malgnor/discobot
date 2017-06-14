@@ -1,0 +1,38 @@
+{
+    "bot": {
+        "levels": {},
+        "plugins": [
+            // "plugin1",
+            // "plugin2"
+        ],
+        "plugin_config": {},
+        "commands_enabled": true,
+        "commands_require_mention": true,
+        "commands_mention_rules": {
+            "everyone": false,
+            "role": true,
+            "user": true
+        },
+        "commands_prefix": "",
+        "commands_allow_edit": true,
+        "commands_level_getter": null,
+        "commands_group_abbrev": true,
+        "plugin_config_provider": null,
+        "plugin_config_format": "json",
+        "plugin_config_dir": "config",
+        "storage_enabled": true,
+        "storage_fsync": true,
+        "storage_serializer": "json",
+        "storage_path": "storage.json"
+    },
+    "token": "Your.Discord.token.here",
+    "shard_id": 0,
+    "shard_count": 1,
+    "max_reconnects": 5,
+    "manhole_enable": false,
+    "manhole_bind": [
+        "127.0.0.1",
+        8484
+    ],
+    "encoder": "json"
+}
