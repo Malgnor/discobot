@@ -20,7 +20,6 @@ class MusicPlayer(Player):
         self.nick = guild_member.nick
         self.playlist = queue.Queue()
         self.speaking = {}
-        self.deaf = False
         self.autopause = False
         self.autovolume = True
         self.volume = 0.1
@@ -38,7 +37,7 @@ class MusicPlayer(Player):
         if len(nickname) > 32:
             nickname = nickname[:29]+'...'
         self.guild_member.set_nickname(nickname)
-        self.updateVolume()
+        self.update_volume()
 
     def on_stop_play(self, _):
         if not self.playlist.empty():
@@ -65,7 +64,7 @@ class MusicPlayer(Player):
         self.anyonespeaking = any(self.speaking.values())
 
         if self.autovolume:
-            self.updateVolume()
+            self.update_volume()
         elif self.autopause:
             if self.anyonespeaking:
                 self.pause()
@@ -93,7 +92,7 @@ class MusicPlayer(Player):
         self.__autovolume = value
         if value:
             self.autopause = False
-    
+
     @property
     def volume(self):
         return self.__base_volume
@@ -101,9 +100,18 @@ class MusicPlayer(Player):
     @volume.setter
     def volume(self, value):
         self.__base_volume = value
-        self.updateVolume()
+        self.update_volume()
 
-    def updateVolume(self):
+    @property
+    def ducking_volume(self):
+        return self.__ducking_volume
+
+    @ducking_volume.setter
+    def ducking_volume(self, value):
+        self.__ducking_volume = value
+        self.update_volume()
+
+    def update_volume(self):
         if isinstance(self.now_playing, UnbufferedOpusEncoderPlayable):
             if self.autovolume and self.anyonespeaking:
                 self.now_playing.volume = self.__base_volume * self.ducking_volume
@@ -120,10 +128,8 @@ class MusicPlugin(Plugin):
         if event.state.user == self.state.me:
             try:
                 player = self.get_player(event.guild.id)
-                if not player.deaf is event.state.deaf:
-                    player.deaf = event.state.deaf
-                    if player.now_playing:
-                        player.skip()
+                if event.state.deaf and player.now_playing:
+                    player.skip()
             except CommandError:
                 pass
 
@@ -212,12 +218,10 @@ class MusicPlugin(Plugin):
         self.get_player(event.guild.id).autopause = not self.get_player(event.guild.id).autopause
         return event.msg.reply('Autopause foi {}.'.format('ativado' if self.get_player(event.guild.id).autopause else 'desativado'))
 
-    @Plugin.command('autovolume', '[vol:float]')
-    def on_autovolume(self, event, vol=None):
+    @Plugin.command('autovolume')
+    def on_autovolume(self, event):
         self.get_player(event.guild.id).autovolume = not self.get_player(event.guild.id).autovolume
-        if vol:
-            self.get_player(event.guild.id).ducking_volume = vol
-        return event.msg.reply('Autovolume foi {}. ({})'.format('ativado' if self.get_player(event.guild.id).autovolume else 'desativado', self.get_player(event.guild.id).ducking_volume))
+        return event.msg.reply('Autovolume foi {}.'.format('ativado' if self.get_player(event.guild.id).autovolume else 'desativado'))
 
     @Plugin.command('volume', '[vol:float]')
     def on_volume(self, event, vol=None):
@@ -227,3 +231,12 @@ class MusicPlugin(Plugin):
             return
         else:
             return event.msg.reply('Volume atual: {}'.format(player.volume))
+
+    @Plugin.command('duckingvolume', '[vol:float]')
+    def on_ducking_volume(self, event, vol=None):
+        player = self.get_player(event.guild.id)
+        if vol:
+            player.ducking_volume = vol
+            return
+        else:
+            return event.msg.reply('Atenuação atual: {}'.format(player.ducking_volume))
