@@ -2,7 +2,7 @@ from random import shuffle
 from disco.bot import Plugin
 from disco.bot.command import CommandError
 from disco.voice.player import Player
-from disco.voice.playable import YoutubeDLInput, BufferedOpusEncoderPlayable, UnbufferedOpusEncoderPlayable
+from disco.voice.playable import YoutubeDLInput, UnbufferedOpusEncoderPlayable
 from disco.voice.client import VoiceException
 from disco.voice.packets import VoiceOPCode
 from six.moves import queue
@@ -44,12 +44,12 @@ class MusicPlayer(Player):
 
     def on_stop_play(self, _):
         if not self.playlist.empty():
-            self.queue.put(self.playlist.get().pipe(
+            self.queue.append(self.playlist.get().pipe(
                 UnbufferedOpusEncoderPlayable))
 
     def on_empty_queue(self):
         if not self.playlist.empty():
-            self.queue.put(self.playlist.get().pipe(
+            self.queue.append(self.playlist.get().pipe(
                 UnbufferedOpusEncoderPlayable))
         else:
             self.guild_member.set_nickname(self.nick)
@@ -177,27 +177,23 @@ class MusicPlugin(Plugin):
     def on_play(self, event, url):
         item = YoutubeDLInput(remove_angular_brackets(
             url)).pipe(UnbufferedOpusEncoderPlayable)
-        self.get_player(event.guild.id).queue.put(item)
+        self.get_player(event.guild.id).queue.append(item)
 
     @Plugin.command('playl', '<url:str>')
     def on_playlist(self, event, url):
         items = list(YoutubeDLInput.many(remove_angular_brackets(url)))
-        self.get_player(event.guild.id).queue.put(
+        self.get_player(event.guild.id).queue.append(
             items[0].pipe(UnbufferedOpusEncoderPlayable))
-        self.get_player(event.guild.id).queue.put(
-            items[1].pipe(UnbufferedOpusEncoderPlayable))
-        for item in items[2:]:
+        for item in items[1:]:
             self.get_player(event.guild.id).playlist.put(item)
 
     @Plugin.command('playlr', '<url:str>')
     def on_playlistrandom(self, event, url):
         items = list(YoutubeDLInput.many(remove_angular_brackets(url)))
         shuffle(items)
-        self.get_player(event.guild.id).queue.put(
+        self.get_player(event.guild.id).queue.append(
             items[0].pipe(UnbufferedOpusEncoderPlayable))
-        self.get_player(event.guild.id).queue.put(
-            items[1].pipe(UnbufferedOpusEncoderPlayable))
-        for item in items[2:]:
+        for item in items[1:]:
             self.get_player(event.guild.id).playlist.put(item)
 
     @Plugin.command('pause')
