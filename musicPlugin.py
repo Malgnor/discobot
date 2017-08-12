@@ -1,17 +1,14 @@
 from random import shuffle
+
 from disco.bot import Plugin
 from disco.bot.command import CommandError
-from disco.voice.player import Player
-from disco.voice.playable import YoutubeDLInput, UnbufferedOpusEncoderPlayable
 from disco.voice.client import VoiceException
 from disco.voice.packets import VoiceOPCode
+from disco.voice.playable import UnbufferedOpusEncoderPlayable, YoutubeDLInput
+from disco.voice.player import Player
+
 from six.moves import queue
-
-
-def remove_angular_brackets(url):
-    if url[0] is '<' and url[-1] is '>':
-        return url[1:-1]
-    return url
+from Utils import remove_angular_brackets
 
 
 class MusicPlayer(Player):
@@ -22,10 +19,10 @@ class MusicPlayer(Player):
         self.nick = guild_member.nick
         self.playlist = queue.Queue()
         self.speaking = {}
-        self.autopause = False
-        self.autovolume = True
-        self.volume = 0.1
-        self.ducking_volume = 0.1
+        self.__autopause = self.autopause = False
+        self.__autovolume = self.autovolume = True
+        self.__base_volume = self.volume = 0.1
+        self.__ducking_volume = self.ducking_volume = 0.1
         self.anyonespeaking = False
 
         self.events.on(self.Events.START_PLAY, self.on_start_play)
@@ -150,8 +147,8 @@ class MusicPlugin(Plugin):
 
         try:
             client = state.channel.connect()
-        except VoiceException as e:
-            return event.msg.reply('Falha ao conectar no canal de voz: `{}`'.format(e))
+        except VoiceException as exception:
+            return event.msg.reply('Falha ao conectar no canal de voz: `{}`'.format(exception))
 
         self.guilds[event.guild.id] = MusicPlayer(
             client, event.guild.get_member(self.state.me.id), event.guild)

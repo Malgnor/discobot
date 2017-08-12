@@ -1,4 +1,5 @@
 ﻿import json
+
 from disco.bot import Plugin
 from disco.bot.command import CommandLevels
 from Utils import save_plugin_config, load_plugin_config, save_bot_config, load_bot_config

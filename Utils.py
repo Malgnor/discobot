@@ -1,8 +1,9 @@
 import os
-from disco.types.message import MessageEmbed
-from disco.util.serializer import Serializer
+
 from disco.bot import BotConfig
 from disco.client import ClientConfig
+from disco.types.message import MessageEmbed
+from disco.util.serializer import Serializer
 
 
 def attachment_to_embed(attachments):
@@ -67,28 +68,28 @@ def load_plugin_config(bot, plugin, fmt=None):
 
 
 def save_bot_config(bot, path):
-    clientKeys = [k for k in ClientConfig.__dict__ if not(
+    client_keys = [k for k in ClientConfig.__dict__ if not(
         k.startswith('__') and k.endswith('__'))]
-    botKeys = [k for k in BotConfig.__dict__ if not(
+    bot_keys = [k for k in BotConfig.__dict__ if not(
         k.startswith('__') and k.endswith('__'))]
-    botKeys.append('plugins')
+    bot_keys.append('plugins')
 
-    toSave = {}
-    toSave['bot'] = {}
-    cc = bot.client.config.to_dict()
-    bc = bot.config.to_dict()
+    to_save = {}
+    to_save['bot'] = {}
+    client_config = bot.client.config.to_dict()
+    bot_config = bot.config.to_dict()
 
-    for k in clientKeys:
-        toSave[k] = cc[k]
-    for k in botKeys:
-        toSave['bot'][k] = bc[k]
-    for k, v in toSave['bot']['levels'].items():
-        toSave['bot']['levels'][k] = str(v)
+    for k in client_keys:
+        to_save[k] = client_config[k]
+    for k in bot_keys:
+        to_save['bot'][k] = bot_config[k]
+    for k, value in to_save['bot']['levels'].items():
+        to_save['bot']['levels'][k] = str(value)
 
     _, ext = os.path.splitext(path)
     Serializer.check_format(ext[1:])
 
-    data = Serializer.dumps(ext[1:], toSave)
+    data = Serializer.dumps(ext[1:], to_save)
 
     with open(path, 'w') as file:
         file.write(data)
@@ -103,3 +104,9 @@ def load_bot_config(bot, path):
     bot.config = BotConfig(bot.client.config.bot) if hasattr(
         bot.client.config, 'bot') else BotConfig()
     return True
+
+
+def remove_angular_brackets(url):
+    if url[0] == '<' and url[-1] == '>':
+        return url[1:-1]
+    return url
