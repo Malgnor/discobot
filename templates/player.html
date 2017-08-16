@@ -10,10 +10,13 @@
 {% elif player %}
   <form action="{{ url_for('on_player_add_route', guild=player.guild.id) }}" method="POST">
     <div class="form-group">
-      <input type="text" class="form-control" name="url" id="url" placeholder="https://www.youtube.com/watch?v=" required>
+      <input type="text" class="form-control" name="url" placeholder="https://www.youtube.com/watch?v=" required>
       <button type="submit" class="btn btn-primary">Adicionar</button>
       <label class="checkbox-inline">
-        <input type="checkbox" name="shuffle" id="shuffle">Shuffle?
+        <input type="checkbox" name="shuffle">Shuffle?
+      </label>
+      <label class="checkbox-inline">
+        <input type="checkbox" name="playlist">Playlist?
       </label>
     </div>
   </form>
@@ -21,11 +24,18 @@
     <p>{% if player.paused %}⏹{% else %}▶{% endif %}: <a href="https://www.youtube.com/watch?v={{ player.now_playing.info['id'] }}">{{ player.now_playing.info['title'] }}</a></p>
   {% endif %}
   {% if player.queue %}
-    <ol>
-    {% for link in player.queue %}
-      <li><a href="{{ url_for('on_player_remove_route', guild=player.guild.id, index=loop.index0) }}">❌</a><a href="https://www.youtube.com/watch?v={{ link.info['id'] }}">{{ link.info['title'] }}</a></li>
-    {% endfor %}
-    </ol>
+    <table class="table table-sm table-hover">
+      <tbody>
+      {% for link in player.queue %}
+        <tr {{ 'class=table-primary' if link.info['id'] == player.now_playing.info['id'] }}>
+          <th scope="row">{{ loop.index }}</th>
+          <td><a href="{{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}">▶️</a></td>
+          <td><a href="{{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}">❌</a></td>
+          <td><a href="https://www.youtube.com/watch?v={{ link.info['id'] }}">{{ link.info['title'] }}</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
   {% endif %}
 {% else %}
   <h1>Nenhum player encontrado!</h1>

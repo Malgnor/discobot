@@ -1,3 +1,5 @@
+import gevent
+
 from disco.bot import Plugin
 from disco.bot.command import CommandError
 from disco.voice.client import VoiceException
@@ -15,13 +17,22 @@ class CircularQueue(PlayableQueue):
 
     def get(self):
         item = self._get()
-        self.append(item)
+        new_item = YoutubeDLInput(item.source._url, item.source._ie_info)
+        new_item._info = item.info
+        self.append(new_item.pipe(UnbufferedOpusEncoderPlayable))
         return item
 
     def remove(self, index):
         if len(self._data) > index:
             return self._data.pop(index)
         return None
+
+    def prepend(self, item):
+        self._data.insert(0, item)
+
+        if self._event:
+            self._event.set()
+            self._event = None
 
 
 class MusicPlayer(Player):
@@ -121,6 +132,10 @@ class MusicPlayer(Player):
                 self.now_playing.volume = self.__base_volume * self.ducking_volume
             else:
                 self.now_playing.volume = self.__base_volume
+
+    def add_items(self, items):
+        for item in items:
+            self.queue.append(item.pipe(UnbufferedOpusEncoderPlayable))
 
 
 class MusicPlugin(Plugin):
@@ -257,27 +272,52 @@ class MusicPlugin(Plugin):
 
         url = request.form['url']
 
-        item = YoutubeDLInput(url)
+        if 'playlist' in request.form:
+            items = list(YoutubeDLInput.many(url))
+            gevent.spawn(self.get_player(guild).add_items, items)
+            flash('{} foram adicionados na playlist.'.format(
+                len(items)), 'success')
+        else:
+            item = YoutubeDLInput(url)
 
-        self.get_player(guild).queue.append(
-            item.pipe(UnbufferedOpusEncoderPlayable))
+            self.get_player(guild).queue.append(
+                item.pipe(UnbufferedOpusEncoderPlayable))
+            flash('"{}" foi adicionado na playlist.'.format(
+                item.info['title']), 'success')
 
         if 'shuffle' in request.form:
             self.get_player(guild).queue.shuffle()
-            flash('Playlist foi embaralhada.')
+            flash('Playlist foi embaralhada.', 'info')
 
-        flash('"{}" foi adicionado na playlist.'.format(item.info['title']))
         return redirect(url_for('on_player_route', guild=guild))
 
-    @Plugin.route('/player/<int:guild>/remove/<int:index>')
-    def on_player_remove_route(self, guild, index):
+    @Plugin.route('/player/<int:guild>/<string:action>/<int:index>')
+    def on_player_action_route(self, guild, action, index):
         from flask import redirect, abort, flash, url_for
 
         if guild not in self.guilds:
             abort(400)
 
-        item = self.get_player(guild).queue.remove(index)
-        if item:
-            flash('"{}" foi removido da playlist.'.format(item.info['title']))
+        player = self.get_player(guild)
+
+        if action == 'remove':
+            item = player.queue.remove(index)
+            if item:
+                flash('"{}" foi removido da playlist.'.format(
+                    item.info['title']), 'info')
+            else:
+                flash('Algo deu errado. O índice {} não foi encontrado na playlist.'.format(
+                    index), 'warning')
+        elif action == 'play':
+            item = player.queue.remove(index)
+            if item:
+                player.queue.prepend(item)
+                if player.now_playing:
+                    player.skip()
+                flash('"{}" está tocando agora.'.format(
+                    item.info['title']), 'success')
+            else:
+                flash('Algo deu errado. O índice {} não foi encontrado na playlist.'.format(
+                    index), 'warning')
 
         return redirect(url_for('on_player_route', guild=guild))
