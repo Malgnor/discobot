@@ -1,23 +1,36 @@
-from random import shuffle
-
 from disco.bot import Plugin
 from disco.bot.command import CommandError
 from disco.voice.client import VoiceException
 from disco.voice.packets import VoiceOPCode
 from disco.voice.playable import UnbufferedOpusEncoderPlayable, YoutubeDLInput
 from disco.voice.player import Player
-
-from six.moves import queue
+from disco.voice.queue import PlayableQueue
 from Utils import remove_angular_brackets
+
+
+class CircularQueue(PlayableQueue):
+    def __init__(self):
+        super(CircularQueue, self).__init__()
+        self._data.append(0)
+
+    def get(self):
+        item = self._get()
+        self.append(item)
+        return item
+
+    def remove(self, index):
+        if len(self._data) > index:
+            return self._data.pop(index)
+        return None
 
 
 class MusicPlayer(Player):
     def __init__(self, client, guild_member, guild):
-        super(MusicPlayer, self).__init__(client)
+        super(MusicPlayer, self).__init__(client, CircularQueue())
+        self.queue.clear()
         self.guild_member = guild_member
         self.guild = guild
         self.nick = guild_member.nick
-        self.playlist = queue.Queue()
         self.speaking = {}
         self.__autopause = self.autopause = False
         self.__autovolume = self.autovolume = True
@@ -26,9 +39,10 @@ class MusicPlayer(Player):
         self.anyonespeaking = False
 
         self.events.on(self.Events.START_PLAY, self.on_start_play)
-        self.events.on(self.Events.STOP_PLAY, self.on_stop_play)
-        self.events.on(self.Events.EMPTY_QUEUE, self.on_empty_queue)
-        self.events.on(self.Events.DISCONNECT, self.on_disconnect)
+        self.events.on(self.Events.EMPTY_QUEUE,
+                       self.on_disconnect_or_empty_queue)
+        self.events.on(self.Events.DISCONNECT,
+                       self.on_disconnect_or_empty_queue)
         self.client.packets.on(VoiceOPCode.SPEAKING, self.on_speaking)
 
     def on_start_play(self, item):
@@ -39,19 +53,7 @@ class MusicPlayer(Player):
         self.guild_member.set_nickname(nickname)
         self.update_volume()
 
-    def on_stop_play(self, _):
-        if not self.playlist.empty():
-            self.queue.append(self.playlist.get().pipe(
-                UnbufferedOpusEncoderPlayable))
-
-    def on_empty_queue(self):
-        if not self.playlist.empty():
-            self.queue.append(self.playlist.get().pipe(
-                UnbufferedOpusEncoderPlayable))
-        else:
-            self.guild_member.set_nickname(self.nick)
-
-    def on_disconnect(self):
+    def on_disconnect_or_empty_queue(self):
         self.guild_member.set_nickname(self.nick)
 
     def on_speaking(self, data):
@@ -125,6 +127,7 @@ class MusicPlugin(Plugin):
     def load(self, ctx):
         super(MusicPlugin, self).load(ctx)
         self.guilds = {}
+        self.bot.http.secret_key = 'secret_key_change_this'
 
     @Plugin.listen('VoiceStateUpdate')
     def on_voice_update(self, event):
@@ -172,26 +175,18 @@ class MusicPlugin(Plugin):
 
     @Plugin.command('play', '<url:str>')
     def on_play(self, event, url):
-        item = YoutubeDLInput(remove_angular_brackets(
-            url)).pipe(UnbufferedOpusEncoderPlayable)
-        self.get_player(event.guild.id).queue.append(item)
+        self.get_player(event.guild.id).queue.append(YoutubeDLInput(remove_angular_brackets(
+            url)).pipe(UnbufferedOpusEncoderPlayable))
 
-    @Plugin.command('playl', '<url:str>')
+    @Plugin.command('playlist', '<url:str>')
     def on_playlist(self, event, url):
-        items = list(YoutubeDLInput.many(remove_angular_brackets(url)))
-        self.get_player(event.guild.id).queue.append(
-            items[0].pipe(UnbufferedOpusEncoderPlayable))
-        for item in items[1:]:
-            self.get_player(event.guild.id).playlist.put(item)
+        for item in YoutubeDLInput.many(remove_angular_brackets(url)):
+            self.get_player(event.guild.id).queue.append(
+                item.pipe(UnbufferedOpusEncoderPlayable))
 
-    @Plugin.command('playlr', '<url:str>')
-    def on_playlistrandom(self, event, url):
-        items = list(YoutubeDLInput.many(remove_angular_brackets(url)))
-        shuffle(items)
-        self.get_player(event.guild.id).queue.append(
-            items[0].pipe(UnbufferedOpusEncoderPlayable))
-        for item in items[1:]:
-            self.get_player(event.guild.id).playlist.put(item)
+    @Plugin.command('shuffle')
+    def on_shuffle(self, event):
+        self.get_player(event.guild.id).queue.shuffle()
 
     @Plugin.command('pause')
     def on_pause(self, event):
@@ -240,3 +235,49 @@ class MusicPlugin(Plugin):
             player.ducking_volume = vol
         else:
             return event.msg.reply('Atenuação atual: {}'.format(player.ducking_volume))
+
+    @Plugin.route('/player/')
+    def on_player_list_route(self):
+        from flask import render_template
+
+        return render_template('player.html', guilds=self.guilds)
+
+    @Plugin.route('/player/<int:guild>/')
+    def on_player_route(self, guild):
+        from flask import render_template
+
+        return render_template('player.html', player=self.guilds[guild] if guild in self.guilds else None)
+
+    @Plugin.route('/player/<int:guild>/add', methods=['POST'])
+    def on_player_add_route(self, guild):
+        from flask import request, redirect, abort, flash, url_for
+
+        if guild not in self.guilds:
+            abort(400)
+
+        url = request.form['url']
+
+        item = YoutubeDLInput(url)
+
+        self.get_player(guild).queue.append(
+            item.pipe(UnbufferedOpusEncoderPlayable))
+
+        if 'shuffle' in request.form:
+            self.get_player(guild).queue.shuffle()
+            flash('Playlist foi embaralhada.')
+
+        flash('"{}" foi adicionado na playlist.'.format(item.info['title']))
+        return redirect(url_for('on_player_route', guild=guild))
+
+    @Plugin.route('/player/<int:guild>/remove/<int:index>')
+    def on_player_remove_route(self, guild, index):
+        from flask import redirect, abort, flash, url_for
+
+        if guild not in self.guilds:
+            abort(400)
+
+        item = self.get_player(guild).queue.remove(index)
+        if item:
+            flash('"{}" foi removido da playlist.'.format(item.info['title']))
+
+        return redirect(url_for('on_player_route', guild=guild))
