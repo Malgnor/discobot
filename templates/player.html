@@ -1,5 +1,35 @@
 {% extends "base.html" %}
 {% block title %}MusicPlayer{{ ' - %s'|format(player.guild.name) if player }}{% endblock title %}
+{% block modalblock %}
+{% if player %}
+  <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <form action="{{ url_for('on_player_add_route', guild=player.guild.id) }}" method="POST">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Adicionar à playlist</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="input-group">
+              <input type="text" class="form-control" name="url" placeholder="https://www.youtube.com/watch?v=" required>            
+              <span class="input-group-addon">
+                <input type="checkbox" name="playlist">Playlist
+              </span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Adicionar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
 {% block content %}
 {% if guilds %}
   <ul>
@@ -8,36 +38,52 @@
     {% endfor %}
   </ul>
 {% elif player %}
-  <form action="{{ url_for('on_player_add_route', guild=player.guild.id) }}" method="POST">
-    <div class="form-group">
-      <input type="text" class="form-control" name="url" placeholder="https://www.youtube.com/watch?v=" required>
-      <button type="submit" class="btn btn-primary">Adicionar</button>
-      <label class="checkbox-inline">
-        <input type="checkbox" name="shuffle">Shuffle?
-      </label>
-      <label class="checkbox-inline">
-        <input type="checkbox" name="playlist">Playlist?
-      </label>
-    </div>
-  </form>
   {% if player.now_playing %}
-    <p>{% if player.paused %}⏹{% else %}▶{% endif %}: <a href="https://www.youtube.com/watch?v={{ player.now_playing.info['id'] }}">{{ player.now_playing.info['title'] }}</a></p>
+    <div class="card m-auto w-50" style="margin-top: 1em;">
+      <div class="card-body">
+          <div class="embed-responsive embed-responsive-16by9">
+            <iframe class="embed-responsive-item" src="https://www.youtube.com/embed/{{ player.now_playing.info['id'] }}?rel=0" allowfullscreen></iframe>
+          </div>
+      </div>
+      <div class="card-footer text-center">
+        {% if player.paused %}
+          <a class="btn btn-primary" href="{{ url_for('on_player_queue_action_route', guild=player.guild.id, action='resume') }}" role="button">Resumir</a>
+        {% else %}
+          <a class="btn btn-primary" href="{{ url_for('on_player_queue_action_route', guild=player.guild.id, action='pause') }}" role="button">Pausar</a>
+        {% endif %}
+        <a class="btn btn-primary" href="{{ url_for('on_player_queue_action_route', guild=player.guild.id, action='skip') }}" role="button">Próximo</a>
+      </div>
+    </div>
   {% endif %}
-  {% if player.queue %}
-    <table class="table table-sm table-hover">
-      <tbody>
-      {% for link in player.queue %}
-        <tr {{ 'class=table-primary' if link.info['id'] == player.now_playing.info['id'] }}>
-          <th scope="row">{{ loop.index }}</th>
-          <td><a href="{{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}">▶️</a></td>
-          <td><a href="{{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}">❌</a></td>
-          <td><a href="https://www.youtube.com/watch?v={{ link.info['id'] }}">{{ link.info['title'] }}</a></td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  {% endif %}
+  <div class="card" style="max-height: 20em; margin-top: 1em;">
+    <h4 class="card-header text-center">Playlist {{ '%d/%d%s'|format(player.queue|count, player.items|count+player.queue|count, ' 🔄' if player.items else '') }}</h4>
+    {% if player.queue %}
+    <div class="card-body p-0" style="overflow-y: auto">
+      <table class="table table-sm table-hover m-0">
+        <tbody>
+          {% for link in player.queue %}
+          <tr {{ 'class=table-primary' if link.info['id'] == player.now_playing.info['id'] }}>
+            <th class="text-center" scope="row">{{ loop.index }}</th>
+            <td class="text-center"><a href="{{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}">▶️</a></td>
+            <td class="text-center"><a href="{{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}">❌</a></td>
+            <td><a href="https://www.youtube.com/watch?v={{ link.info['id'] }}">{{ link.info['title'] }}</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="card-body text-center">
+      <p class="alert alert-info" role="alert">Playlist vazia.</p>
+    </div>
+    {% endif %}
+    <div class="card-footer text-center">
+      <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addModal">Adicionar</button>
+      <a class="btn btn-primary" href="{{ url_for('on_player_queue_action_route', guild=player.guild.id, action='shuffle') }}" role="button">Shuffle</a>
+      <a class="btn btn-primary" href="{{ url_for('on_player_queue_action_route', guild=player.guild.id, action='clear') }}" role="button">Limpar</a>
+    </div>
+  </div>
 {% else %}
-  <h1>Nenhum player encontrado!</h1>
+  <p class="text-center alert alert-warning" role="alert">Nenhum player encontrado!</p>
 {% endif %}
 {% endblock content %}

@@ -48,6 +48,9 @@ class MusicPlayer(Player):
         self.__base_volume = self.volume = 0.1
         self.__ducking_volume = self.ducking_volume = 0.1
         self.anyonespeaking = False
+        self.items = PlayableQueue()
+
+        gevent.spawn(self.add_items)
 
         self.events.on(self.Events.START_PLAY, self.on_start_play)
         self.events.on(self.Events.EMPTY_QUEUE,
@@ -133,9 +136,14 @@ class MusicPlayer(Player):
             else:
                 self.now_playing.volume = self.__base_volume
 
-    def add_items(self, items):
-        for item in items:
-            self.queue.append(item.pipe(UnbufferedOpusEncoderPlayable))
+    def add_items(self):
+        while True:
+            self.queue.append(self.items.get().pipe(
+                UnbufferedOpusEncoderPlayable))
+
+    def clear(self):
+        self.items.clear()
+        self.queue.clear()
 
 
 class MusicPlugin(Plugin):
@@ -196,8 +204,7 @@ class MusicPlugin(Plugin):
     @Plugin.command('playlist', '<url:str>')
     def on_playlist(self, event, url):
         for item in YoutubeDLInput.many(remove_angular_brackets(url)):
-            self.get_player(event.guild.id).queue.append(
-                item.pipe(UnbufferedOpusEncoderPlayable))
+            self.get_player(event.guild.id).items.append(item)
 
     @Plugin.command('shuffle')
     def on_shuffle(self, event):
@@ -274,7 +281,8 @@ class MusicPlugin(Plugin):
 
         if 'playlist' in request.form:
             items = list(YoutubeDLInput.many(url))
-            gevent.spawn(self.get_player(guild).add_items, items)
+            for item in items:
+                self.get_player(guild).items.append(item)
             flash('{} foram adicionados na playlist.'.format(
                 len(items)), 'success')
         else:
@@ -285,9 +293,32 @@ class MusicPlugin(Plugin):
             flash('"{}" foi adicionado na playlist.'.format(
                 item.info['title']), 'success')
 
-        if 'shuffle' in request.form:
-            self.get_player(guild).queue.shuffle()
+        return redirect(url_for('on_player_route', guild=guild))
+
+    @Plugin.route('/player/<int:guild>/<string:action>')
+    def on_player_queue_action_route(self, guild, action):
+        from flask import redirect, abort, flash, url_for
+
+        if guild not in self.guilds:
+            abort(400)
+
+        player = self.get_player(guild)
+
+        if action == 'shuffle':
+            player.queue.shuffle()
             flash('Playlist foi embaralhada.', 'info')
+        elif action == 'clear':
+            player.clear()
+            flash('Playlist foi esvaziada.', 'info')
+        elif action == 'play' or action == 'resume':
+            player.resume()
+            flash('O player foi despausado.', 'info')
+        elif action == 'pause':
+            player.pause()
+            flash('O player foi pausado.', 'info')
+        elif action == 'skip':
+            player.skip()
+            player.resume()
 
         return redirect(url_for('on_player_route', guild=guild))
 
@@ -314,6 +345,7 @@ class MusicPlugin(Plugin):
                 player.queue.prepend(item)
                 if player.now_playing:
                     player.skip()
+                player.resume()
                 flash('"{}" está tocando agora.'.format(
                     item.info['title']), 'success')
             else:
