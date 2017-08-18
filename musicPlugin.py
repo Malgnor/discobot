@@ -353,3 +353,32 @@ class MusicPlugin(Plugin):
                     index), 'warning')
 
         return redirect(url_for('on_player_route', guild=guild))
+
+    @Plugin.route('/player/<int:guild>/vol/<volume>')
+    def on_player_volume_route(self, guild, volume):
+        from flask import jsonify
+
+        try:
+            self.get_player(guild).volume = float(volume)
+        except:
+            pass
+
+        return jsonify(volume=self.get_player(guild).volume)
+
+    @Plugin.route('/player/<int:guild>/opt', methods=['POST'])
+    def on_player_opt_route(self, guild):
+        from flask import request, jsonify
+
+        player = self.get_player(guild)
+
+        option = request.form['options']
+
+        if option == 'duck':
+            player.autovolume = True
+            player.ducking_volume = float(request.form['duckVolume'])
+        elif option == 'pause':
+            player.autopause = True
+        elif option == 'none':
+            player.autovolume = player.autopause = False
+
+        return jsonify(autovolume=player.autovolume, autopause=player.autopause, duckvolume=player.ducking_volume)
