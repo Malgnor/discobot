@@ -39,13 +39,7 @@
 {% endblock %}
 {% block content %}
 <div id="content" class="container">
-{% if guilds %}
-  <ul>
-    {% for guild_id in guilds %}
-      <li><a href="{{ url_for('on_player_route', guild=guild_id) }}">{{ guilds[guild_id].guild.name }}</a></li>
-    {% endfor %}
-  </ul>
-{% elif player %}
+{% if player %}
   <div class="card-group" style="margin-top: 1em;">
     <div class="card">
       {% if player.now_playing %}
@@ -90,8 +84,8 @@
               </label>
             </div>
             <div class="tab-content">
-              <div class="tab-pane {{ 'active' if not player.autovolume }}" id="notDuck" role="tabpanel"></div>
-              <div class="tab-pane {{ 'active' if player.autovolume }}" id="duckInput" role="tabpanel">
+              <div class="tab-pane fade {{ 'show active' if not player.autovolume }}" id="notDuck" role="tabpanel"></div>
+              <div class="tab-pane fade {{ 'show active' if player.autovolume }}" id="duckInput" role="tabpanel">
                 <div class="input-group">
                   <span class="">🔊</span>
                   <input class="form-control p-0" id="duckVolumeControl" name="duckVolume" type="range" min="0" max="1" step="any" value="{{ player.ducking_volume }}">
@@ -103,7 +97,7 @@
       </ul>
     </div>
   </div>
-  <div class="card" style="max-height: 20em; margin-top: 1em;">
+  <div class="card" style="min-height: 20em; margin-top: 1em;">
     <h4 class="card-header text-center">Playlist {{ '%d/%d%s'|format(player.queue|count, player.items|count+player.queue|count, ' 🔄' if player.items else '') }}</h4>
     {% if player.queue %}
     <div class="card-body p-0" style="overflow-y: auto">
@@ -132,7 +126,7 @@
     </div>
   </div>
 {% else %}
-  <p class="text-center alert alert-warning" role="alert">Nenhum player encontrado!</p>
+  <p class="text-center alert alert-warning" role="alert">Player n&atilde;o encontrado!</p>
 {% endif %}
 </div>
 {% endblock content %}

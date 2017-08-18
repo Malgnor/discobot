@@ -259,13 +259,8 @@ class MusicPlugin(Plugin):
             return event.msg.reply('Atenuação atual: {}'.format(player.ducking_volume))
 
     @Plugin.route('/player/')
-    def on_player_list_route(self):
-        from flask import render_template
-
-        return render_template('player.html', guilds=self.guilds)
-
     @Plugin.route('/player/<int:guild>/')
-    def on_player_route(self, guild):
+    def on_player_route(self, guild=0):
         from flask import render_template
 
         return render_template('player.html', player=self.guilds[guild] if guild in self.guilds else None)
@@ -317,7 +312,8 @@ class MusicPlugin(Plugin):
             player.pause()
             flash('O player foi pausado.', 'info')
         elif action == 'skip':
-            player.skip()
+            if player.now_playing:
+                player.skip()
             player.resume()
 
         return redirect(url_for('on_player_route', guild=guild))
