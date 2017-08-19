@@ -6,7 +6,7 @@ from Utils import save_plugin_config, load_plugin_config, save_bot_config, load_
 
 
 class PluginManager(Plugin):
-    @Plugin.command('storage save', group='bot', description='Força o salvamento dos dados do bot.')
+    @Plugin.command('storage save', group='bot', description='Força o salvamento dos dados do bot.', hide=True)
     def on_botstoragesave_command(self, event):
         if self.storage:
             self.storage.save()
@@ -14,7 +14,7 @@ class PluginManager(Plugin):
         else:
             event.msg.reply('Não há sistema de dados ativos.')
 
-    @Plugin.command('config save', '[path:str...]', group='bot', description='Salva as configurações do bot/client.')
+    @Plugin.command('config save', '[path:str...]', group='bot', description='Salva as configurações do bot/client.', hide=True)
     def on_botsave_command(self, event, path='config.json'):
         try:
             save_bot_config(self.bot, path)
@@ -23,7 +23,7 @@ class PluginManager(Plugin):
         except Exception as exception:
             event.msg.reply('Erro: {}.'.format(exception))
 
-    @Plugin.command('config reload', '[path:str...]', group='bot', description='Recarrega as configurações do bot/client.')
+    @Plugin.command('config reload', '[path:str...]', group='bot', description='Recarrega as configurações do bot/client.', hide=True)
     def on_botreload_command(self, event, path='config.json'):
         try:
             if load_bot_config(self.bot, path):
@@ -33,7 +33,7 @@ class PluginManager(Plugin):
         except Exception as exception:
             event.msg.reply('Erro: {}.'.format(exception))
 
-    @Plugin.command('config edit', '<plugin:str> <key:str> <value:str...>', group='plugin', description='Altera uma configuração do plugin')
+    @Plugin.command('config edit', '<plugin:str> <key:str> <value:str...>', group='plugin', description='Altera uma configuração do plugin', hide=True)
     def on_configedit_command(self, event, plugin, key, value):
         if plugin in self.bot.plugins:
             plugin = self.bot.plugins[plugin]
@@ -78,7 +78,7 @@ class PluginManager(Plugin):
         message += '```'
         event.msg.reply(message)
 
-    @Plugin.command('reload', '<plugin:str>', group='plugin', description='Recarrega um plugin.', oob=True)
+    @Plugin.command('reload', '<plugin:str>', group='plugin', description='Recarrega um plugin.', oob=True, hide=True)
     def on_pluginreload_command(self, event, plugin):
         self.client.api.channels_typing(event.msg.channel_id)
 
@@ -89,7 +89,7 @@ class PluginManager(Plugin):
             event.msg.reply('Plugin {} não encontrado.'.format(plugin))
             return
 
-    @Plugin.command('add', '<plugin:str>', group='plugin', description='Recarrega um plugin.', oob=True)
+    @Plugin.command('add', '<plugin:str>', group='plugin', description='Recarrega um plugin.', oob=True, hide=True)
     def on_pluginadd_command(self, event, plugin):
         self.client.api.channels_typing(event.msg.channel_id)
         try:
@@ -101,7 +101,7 @@ class PluginManager(Plugin):
 
         event.msg.reply('Plugin {} carregado.'.format(plugin))
 
-    @Plugin.command('remove', '<plugin:str>', group='plugin', description='Recarrega um plugin.', oob=True)
+    @Plugin.command('remove', '<plugin:str>', group='plugin', description='Recarrega um plugin.', oob=True, hide=True)
     def on_pluginremove_command(self, event, plugin):
         self.client.api.channels_typing(event.msg.channel_id)
 
@@ -112,7 +112,7 @@ class PluginManager(Plugin):
             event.msg.reply('Plugin {} não encontrado.'.format(plugin))
             return
 
-    @Plugin.command('config view', '[plugin:str]', group='plugin', description='Mostra as configurações de um plugin.')
+    @Plugin.command('config view', '[plugin:str]', group='plugin', description='Mostra as configurações de um plugin.', hide=True)
     def on_config_command(self, event, plugin=None):
         self.client.api.channels_typing(event.msg.channel_id)
 
@@ -141,7 +141,7 @@ class PluginManager(Plugin):
                 to_send += config
             event.msg.reply(to_send)
 
-    @Plugin.command('config save', '[plugin:str] [fmt:str]', group='plugin', description='Salva as configurações de um plugin.')
+    @Plugin.command('config save', '[plugin:str] [fmt:str]', group='plugin', description='Salva as configurações de um plugin.', hide=True)
     def on_config_save_command(self, event, plugin=None, fmt=None):
         self.client.api.channels_typing(event.msg.channel_id)
 
@@ -166,7 +166,7 @@ class PluginManager(Plugin):
             event.msg.reply(
                 'Configurações dos plugins {} foram salvas.'.format(', '.join(saved)))
 
-    @Plugin.command('config reload', '[plugin:str] [fmt:str]', group='plugin', description='Recarrega as configurações de um plugin.')
+    @Plugin.command('config reload', '[plugin:str] [fmt:str]', group='plugin', description='Recarrega as configurações de um plugin.', hide=True)
     def on_config_reload_command(self, event, plugin=None, fmt=None):
         self.client.api.channels_typing(event.msg.channel_id)
 
@@ -245,3 +245,36 @@ class PluginManager(Plugin):
                 to_send = ''
             to_send += command
         event.msg.reply(to_send)
+
+    @Plugin.route('/')
+    def on_plugins_route(self):
+        from flask import render_template
+
+        plugins = []
+        for plugin in self.bot.plugins.values():
+            value = {}
+            value['name'] = plugin.name
+            value['commands'] = []
+
+            for cmd in plugin.commands:
+                if 'hide' in cmd.metadata and cmd.metadata['hide']:
+                    continue
+
+                command = {}
+                command['group'] = cmd.group+' ' if cmd.group else ''
+                command['triggers'] = '|'.join(cmd.triggers)
+
+                if cmd.args:
+                    args = []
+                    for arg in cmd.args.args:
+                        args.append('{}{}:{}{}'.format('' if arg.required else '[', arg.name, '|'.join(arg.types), '' if arg.required else ']'))
+                    command['args'] = ' '.join(args)
+
+                if 'description' in cmd.metadata:
+                    command['description'] = cmd.metadata['description']
+
+                value['commands'].append(command)
+
+            plugins.append(value)
+
+        return render_template('plugins.html', plugins=plugins)

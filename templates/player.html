@@ -2,7 +2,7 @@
 {% block title %}MusicPlayer{{ ' - %s'|format(player.guild.name) if player }}{% endblock title %}
 {% block head %}
 {{ super() }}
-<meta property="og:title" content="MusicPlayer{{ ' - %s'|format(player.guild.name) if player }}"/>
+<meta property="og:title" content="{{ self.title() }}"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="MusicPlayer"/>
 <meta property="og:description" content="Controle o bot atrav&eacute;s da web."/>
