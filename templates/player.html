@@ -2,34 +2,34 @@
 {% block title %}MusicPlayer{{ ' - %s'|format(player.guild.name) if player }}{% endblock title %}
 {% block head %}
 {{ super() }}
-<meta property="og:title" content="{{ self.title() }}"/>
-<meta property="og:type" content="website"/>
-<meta property="og:site_name" content="MusicPlayer"/>
-<meta property="og:description" content="Controle o bot atrav&eacute;s da web."/>
+<meta property=og:title content="{{ self.title() }}" />
+<meta property=og:type content=website />
+<meta property=og:site_name content=MusicPlayer />
+<meta property=og:description content="Controle o bot atrav&eacute;s da web."/>
 {% endblock %}
 {% block modalblock %}
 {% if player %}
-  <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-      <form action="{{ url_for('on_player_add_route', guild=player.guild.id) }}" method="POST">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="exampleModalLabel">Adicionar à playlist</h5>
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
+  <div class="modal fade" id=addModal tabindex=-1 role=dialog aria-labelledby=addModalLabel aria-hidden=true>
+    <div class=modal-dialog role=document>
+      <form id=add>
+        <div class=modal-content>
+          <div class=modal-header>
+            <h5 class=modal-title id=exampleModalLabel>Adicionar à playlist</h5>
+            <button type=button class=close data-dismiss=modal aria-label=Close>
+              <span aria-hidden=true>&times;</span>
             </button>
           </div>
-          <div class="modal-body">
-            <div class="input-group">
-              <input type="text" class="form-control" name="url" placeholder="https://www.youtube.com/watch?v=" required>            
-              <span class="input-group-addon">
-                <input type="checkbox" name="playlist">Playlist
+          <div class=modal-body>
+            <div class=input-group>
+              <input type=text class=form-control name=url placeholder=https://www.youtube.com/watch?v= required>            
+              <span class=input-group-addon>
+                <input type=checkbox name=playlist>Playlist
               </span>
             </div>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Adicionar</button>
+          <div class=modal-footer>
+            <button type=button class="btn btn-secondary" data-dismiss=modal>Cancelar</button>
+            <button type=submit class="btn btn-primary">Adicionar</button>
           </div>
         </div>
       </form>
@@ -38,57 +38,57 @@
 {% endif %}
 {% endblock %}
 {% block content %}
-<div id="content" class="container">
+<div id=content class=container>
 {% if player %}
-  <div class="card-group" style="margin-top: 1em;">
-    <div class="card">
+  <div class=card-group style="margin-top: 1em;">
+    <div class=card>
       {% if player.now_playing %}
-        <div class="card-body">
+        <div class=card-body>
             <div class="embed-responsive embed-responsive-16by9">
-              <iframe class="embed-responsive-item" src="https://www.youtube.com/embed/{{ player.now_playing.info['id'] }}?rel=0" allowfullscreen></iframe>
+              <iframe class=embed-responsive-item src="https://www.youtube.com/embed/{{ player.now_playing.info['id'] }}?rel=0" allowfullscreen></iframe>
             </div>
         </div>
       {% else %}
         <div class="card-body text-center">
-          <p class="alert alert-info" role="alert">Playlist vazia.</p>
+          <p class="alert alert-info" role=alert>Playlist vazia.</p>
         </div>
       {% endif %}
     </div>
     <div class="card text-center">
       <ul class="list-group list-group-flush">
-        <li class="list-group-item">
+        <li class=list-group-item>
           {% if player.paused %}
-            <a class="btn btn-primary" href="{{ url_for('on_player_queue_action_route', guild=player.guild.id, action='resume') }}" role="button">Resumir</a>
+            <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='resume') }} role=button>Resumir</a>
           {% else %}
-            <a class="btn btn-primary" href="{{ url_for('on_player_queue_action_route', guild=player.guild.id, action='pause') }}" role="button">Pausar</a>
+            <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='pause') }} role=button>Pausar</a>
           {% endif %}
-          <a class="btn btn-primary" href="{{ url_for('on_player_queue_action_route', guild=player.guild.id, action='skip') }}" role="button">Próximo</a>
+          <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='skip') }} role=button>Próximo</a>
         </li>
-        <li class="list-group-item">
-          <div class="input-group">
+        <li class=list-group-item>
+          <div class=input-group>
             <span class="">🔊</span>
-            <input class="form-control p-0" id="volumeControl" type="range" min="0" max="1" step="any" value="{{ player.volume }}">
+            <input class="form-control p-0" id=volumeControl type=range min=0 max=1 step=any value={{ player.volume }}>
           </div>
         </li>
-        <li class="list-group-item">
-          <form id="opt">
-            <div class="btn-group" data-toggle="buttons">
-              <label class="btn btn-secondary {{ 'active' if not (player.autovolume or player.autopause) }}" data-toggle="list" data-target="#notDuck" role="tab">
-                <input type="radio" name="options" id="option1" value="none" autocomplete="off" {{ 'checked' if not (player.autovolume or player.autopause) }}>Nenhum
+        <li class=list-group-item>
+          <form id=opt>
+            <div class=btn-group data-toggle=buttons>
+              <label class="btn btn-secondary {{ 'active' if not (player.autovolume or player.autopause) }}" data-toggle=list data-target=#notDuck role=tab>
+                <input type=radio name=options id=option1 value=none autocomplete=off {{ 'checked' if not (player.autovolume or player.autopause) }}>Nenhum
               </label>
-              <label class="btn btn-secondary {{ 'active' if player.autovolume }}" data-toggle="list" data-target="#duckInput" role="tab">
-                <input type="radio" name="options" id="option2" value="duck" autocomplete="off" {{ 'checked' if player.autovolume }}>Atenuar
+              <label class="btn btn-secondary {{ 'active' if player.autovolume }}" data-toggle=list data-target=#duckInput role=tab>
+                <input type=radio name=options id=option2 value=duck autocomplete=off {{ 'checked' if player.autovolume }}>Atenuar
               </label>
-              <label class="btn btn-secondary {{ 'active' if player.autopause }}" data-toggle="list" data-target="#notDuck" role="tab">
-                <input type="radio" name="options" id="option3" value="pause" autocomplete="off" {{ 'checked' if player.autopause }}>Pausar
+              <label class="btn btn-secondary {{ 'active' if player.autopause }}" data-toggle=list data-target=#notDuck role=tab>
+                <input type=radio name=options id=option3 value=pause autocomplete=off {{ 'checked' if player.autopause }}>Pausar
               </label>
             </div>
-            <div class="tab-content">
-              <div class="tab-pane fade {{ 'show active' if not player.autovolume }}" id="notDuck" role="tabpanel"></div>
-              <div class="tab-pane fade {{ 'show active' if player.autovolume }}" id="duckInput" role="tabpanel">
-                <div class="input-group">
-                  <span class="">🔊</span>
-                  <input class="form-control p-0" id="duckVolumeControl" name="duckVolume" type="range" min="0" max="1" step="any" value="{{ player.ducking_volume }}">
+            <div class=tab-content>
+              <div class="tab-pane fade {{ 'show active' if not player.autovolume }}" id=notDuck role=tabpanel></div>
+              <div class="tab-pane fade {{ 'show active' if player.autovolume }}" id=duckInput role=tabpanel>
+                <div class=input-group>
+                  <span class="">🔉</span>
+                  <input class="form-control p-0" id=duckVolumeControl name=duckVolume type=range min=0 max=1 step=any value={{ player.ducking_volume }}>
                 </div>
               </div>
             </div>
@@ -97,7 +97,7 @@
       </ul>
     </div>
   </div>
-  <div class="card" style="min-height: 20em; margin-top: 1em;">
+  <div class=card style="min-height: 20em; margin-top: 1em;">
     <h4 class="card-header text-center">Playlist {{ '%d/%d%s'|format(player.queue|count, player.items|count+player.queue|count, ' 🔄' if player.items else '') }}</h4>
     {% if player.queue %}
     <div class="card-body p-0" style="overflow-y: auto">
@@ -105,9 +105,9 @@
         <tbody>
           {% for link in player.queue %}
           <tr {{ 'class=table-primary' if link.info['id'] == player.now_playing.info['id'] }}>
-            <th class="text-center" scope="row">{{ loop.index }}</th>
-            <td class="text-center"><a href="{{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}">▶️</a></td>
-            <td class="text-center"><a href="{{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}">❌</a></td>
+            <th class=text-center scope=row>{{ loop.index }}</th>
+            <td class=text-center><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}>▶️</a></td>
+            <td class=text-center><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}>❌</a></td>
             <td><a href="https://www.youtube.com/watch?v={{ link.info['id'] }}">{{ link.info['title'] }}</a></td>
           </tr>
           {% endfor %}
@@ -116,20 +116,20 @@
     </div>
     {% else %}
     <div class="card-body text-center">
-      <p class="alert alert-info" role="alert">Playlist vazia.</p>
+      <p class="alert alert-info" role=alert>Playlist vazia.</p>
     </div>
     {% endif %}
     <div class="card-footer text-center">
-      <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addModal">Adicionar</button>
-      <a class="btn btn-primary" href="{{ url_for('on_player_queue_action_route', guild=player.guild.id, action='shuffle') }}" role="button">Shuffle</a>
-      <a class="btn btn-primary" href="{{ url_for('on_player_queue_action_route', guild=player.guild.id, action='clear') }}" role="button">Limpar</a>
+      <button type=button class="btn btn-primary" data-toggle=modal data-target=#addModal>Adicionar</button>
+      <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='shuffle') }} role=button>Shuffle</a>
+      <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='clear') }} role=button>Limpar</a>
     </div>
   </div>
 {% else %}
-  <p class="text-center alert alert-warning" role="alert">Player n&atilde;o encontrado!</p>
+  <p class="text-center alert alert-warning" role=alert>Player n&atilde;o encontrado!</p>
 {% endif %}
 </div>
 {% endblock content %}
 {% block scripts %}
-<script src="{{ url_for('static', filename='player.js') }}"></script>
+<script src="{{ url_for('static', filename='player.js') }}?v=1"></script>
 {% endblock %}

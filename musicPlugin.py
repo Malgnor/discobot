@@ -267,7 +267,7 @@ class MusicPlugin(Plugin):
 
     @Plugin.route('/player/<int:guild>/add', methods=['POST'])
     def on_player_add_route(self, guild):
-        from flask import request, redirect, abort, flash, url_for
+        from flask import request, jsonify, abort, flash
 
         if guild not in self.guilds:
             abort(400)
@@ -288,11 +288,11 @@ class MusicPlugin(Plugin):
             flash('"{}" foi adicionado na playlist.'.format(
                 item.info['title']), 'success')
 
-        return redirect(url_for('on_player_route', guild=guild))
+        return jsonify(action='add')
 
     @Plugin.route('/player/<int:guild>/<string:action>')
     def on_player_queue_action_route(self, guild, action):
-        from flask import redirect, abort, flash, url_for
+        from flask import jsonify, abort, flash
 
         if guild not in self.guilds:
             abort(400)
@@ -316,11 +316,11 @@ class MusicPlugin(Plugin):
                 player.skip()
             player.resume()
 
-        return redirect(url_for('on_player_route', guild=guild))
+        return jsonify(action=action)
 
     @Plugin.route('/player/<int:guild>/<string:action>/<int:index>')
     def on_player_action_route(self, guild, action, index):
-        from flask import redirect, abort, flash, url_for
+        from flask import jsonify, abort, flash
 
         if guild not in self.guilds:
             abort(400)
@@ -348,7 +348,7 @@ class MusicPlugin(Plugin):
                 flash('Algo deu errado. O índice {} não foi encontrado na playlist.'.format(
                     index), 'warning')
 
-        return redirect(url_for('on_player_route', guild=guild))
+        return jsonify(action=action)
 
     @Plugin.route('/player/<int:guild>/vol/<volume>')
     def on_player_volume_route(self, guild, volume):

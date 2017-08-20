@@ -10,8 +10,10 @@
 {% block content %}
 <div id=content class=container>
   <div class=card>
-    <h6 class=card-header>Exemplo</h6>
-    <div class="card-body p-1">
+    <a data-toggle=collapse href=#exampleBody aria-expanded=true aria-controls=exampleBody>
+      <h6 class=card-header>Exemplo</h6>
+    </a>
+    <div class="card-body p-1 show" id=exampleBody>
       <ul>
         <li>
           <span class=text-primary>grupo</span>
@@ -24,7 +26,7 @@
   </div>
   {% for plugin in plugins %}
     <div class=card>
-      <a data-toggle="collapse" href={{ '#%sBody'|format(plugin.name) }} aria-expanded="false" aria-controls={{ '%sBody'|format(plugin.name) }}>
+      <a data-toggle=collapse href={{ '#%sBody'|format(plugin.name) }} aria-expanded=false aria-controls={{ '%sBody'|format(plugin.name) }}>
         <h5 class=card-header>{{ plugin.name }}</h5>
       </a>
       <div class=collapse id={{ '%sBody'|format(plugin.name) }}>
