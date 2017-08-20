@@ -7,6 +7,9 @@ from disco.voice.packets import VoiceOPCode
 from disco.voice.playable import UnbufferedOpusEncoderPlayable, YoutubeDLInput
 from disco.voice.player import Player
 from disco.voice.queue import PlayableQueue
+
+from flask import abort, flash, jsonify, request
+
 from Utils import remove_angular_brackets
 
 
@@ -47,6 +50,7 @@ class MusicPlayer(Player):
         self.__autovolume = self.autovolume = True
         self.__base_volume = self.volume = 0.1
         self.__ducking_volume = self.ducking_volume = 0.1
+        self.__clear = False
         self.anyonespeaking = False
         self.items = PlayableQueue()
 
@@ -140,10 +144,14 @@ class MusicPlayer(Player):
         while True:
             self.queue.append(self.items.get().pipe(
                 UnbufferedOpusEncoderPlayable))
+            if self.__clear:
+                self.__clear = False
+                self.queue.clear()
 
     def clear(self):
         self.items.clear()
         self.queue.clear()
+        self.__clear = True
 
 
 class MusicPlugin(Plugin):
@@ -162,7 +170,7 @@ class MusicPlugin(Plugin):
             except CommandError:
                 pass
 
-    @Plugin.command('join')
+    @Plugin.command('join', description='Faz o bot se conectar ao seu canal de voz.')
     def on_join(self, event):
         if event.guild.id in self.guilds:
             return event.msg.reply("Já estou tocando música aqui.")
@@ -186,63 +194,63 @@ class MusicPlugin(Plugin):
 
     def get_player(self, guild_id):
         if guild_id not in self.guilds:
-            raise CommandError("I'm not currently playing music here.")
+            raise CommandError("Não estou tocando música aqui.")
         return self.guilds.get(guild_id)
 
-    @Plugin.command('leave')
+    @Plugin.command('leave', description='Faz o bot se desconectar do canal de voz.')
     def on_leave(self, event):
         player = self.get_player(event.guild.id)
         player.disconnect()
         if event.guild.id in self.guilds:
             del self.guilds[event.guild.id]
 
-    @Plugin.command('play', '<url:str>')
+    @Plugin.command('play', '<url:str>', description='Adiciona um item na playlist.')
     def on_play(self, event, url):
         self.get_player(event.guild.id).queue.append(YoutubeDLInput(remove_angular_brackets(
             url)).pipe(UnbufferedOpusEncoderPlayable))
 
-    @Plugin.command('playlist', '<url:str>')
+    @Plugin.command('playlist', '<url:str>', description='Adiciona vários items na playlist.')
     def on_playlist(self, event, url):
         for item in YoutubeDLInput.many(remove_angular_brackets(url)):
             self.get_player(event.guild.id).items.append(item)
 
-    @Plugin.command('shuffle')
+    @Plugin.command('shuffle', description='Embaralha a playlist.')
     def on_shuffle(self, event):
         self.get_player(event.guild.id).queue.shuffle()
 
-    @Plugin.command('pause')
+    @Plugin.command('pause', description='Pausa o player.')
     def on_pause(self, event):
         self.get_player(event.guild.id).pause()
 
-    @Plugin.command('resume')
+    @Plugin.command('resume', description='Despausa o player.')
     def on_resume(self, event):
         self.get_player(event.guild.id).resume()
 
-    @Plugin.command('skip')
+    @Plugin.command('skip', description='Pula o item atual.')
     def on_skip(self, event):
         if self.get_player(event.guild.id).now_playing:
             self.get_player(event.guild.id).skip()
 
-    @Plugin.command('link')
+    @Plugin.command('link', description='Mostra o link do item atual.')
     def on_link(self, event):
         if self.get_player(event.guild.id).now_playing:
             info = self.get_player(event.guild.id).now_playing.info
             return event.msg.reply('{}'.format(info.get('webpage_url', 'Não tem. :(')))
         return event.msg.reply('Não estou tocando no momento.')
 
-    @Plugin.command('autopause')
+    @Plugin.command('autopause', description='Ativa/desativa o autopause.')
     def on_autopause(self, event):
         self.get_player(event.guild.id).autopause = not self.get_player(
             event.guild.id).autopause
         return event.msg.reply('Autopause foi {}.'.format('ativado' if self.get_player(event.guild.id).autopause else 'desativado'))
 
-    @Plugin.command('autovolume')
+    @Plugin.command('autovolume', description='Ativa/desativa o autovolume.')
     def on_autovolume(self, event):
         self.get_player(event.guild.id).autovolume = not self.get_player(
             event.guild.id).autovolume
         return event.msg.reply('Autovolume foi {}.'.format('ativado' if self.get_player(event.guild.id).autovolume else 'desativado'))
 
-    @Plugin.command('volume', '[vol:float]')
+    @Plugin.command('volume', '[vol:float]', description='Altera o volume.')
     def on_volume(self, event, vol=None):
         player = self.get_player(event.guild.id)
         if vol:
@@ -250,7 +258,7 @@ class MusicPlugin(Plugin):
         else:
             return event.msg.reply('Volume atual: {}'.format(player.volume))
 
-    @Plugin.command('duckingvolume', '[vol:float]')
+    @Plugin.command('duckingvolume', '[vol:float]', description='Altera a atenuação do autovolume.')
     def on_ducking_volume(self, event, vol=None):
         player = self.get_player(event.guild.id)
         if vol:
@@ -267,7 +275,6 @@ class MusicPlugin(Plugin):
 
     @Plugin.route('/player/<int:guild>/add', methods=['POST'])
     def on_player_add_route(self, guild):
-        from flask import request, jsonify, abort, flash
 
         if guild not in self.guilds:
             abort(400)
@@ -292,7 +299,6 @@ class MusicPlugin(Plugin):
 
     @Plugin.route('/player/<int:guild>/<string:action>')
     def on_player_queue_action_route(self, guild, action):
-        from flask import jsonify, abort, flash
 
         if guild not in self.guilds:
             abort(400)
@@ -320,7 +326,6 @@ class MusicPlugin(Plugin):
 
     @Plugin.route('/player/<int:guild>/<string:action>/<int:index>')
     def on_player_action_route(self, guild, action, index):
-        from flask import jsonify, abort, flash
 
         if guild not in self.guilds:
             abort(400)
@@ -352,18 +357,19 @@ class MusicPlugin(Plugin):
 
     @Plugin.route('/player/<int:guild>/vol/<volume>')
     def on_player_volume_route(self, guild, volume):
-        from flask import jsonify
 
-        try:
-            self.get_player(guild).volume = float(volume)
-        except:
-            pass
+        if guild not in self.guilds:
+            abort(400)
 
-        return jsonify(volume=self.get_player(guild).volume)
+        self.get_player(guild).volume = float(volume)
+
+        return jsonify(action='volume', volume=self.get_player(guild).volume)
 
     @Plugin.route('/player/<int:guild>/opt', methods=['POST'])
     def on_player_opt_route(self, guild):
-        from flask import request, jsonify
+
+        if guild not in self.guilds:
+            abort(400)
 
         player = self.get_player(guild)
 
@@ -377,4 +383,4 @@ class MusicPlugin(Plugin):
         elif option == 'none':
             player.autovolume = player.autopause = False
 
-        return jsonify(autovolume=player.autovolume, autopause=player.autopause, duckvolume=player.ducking_volume)
+        return jsonify(action='opt', option=option, autovolume=player.autovolume, autopause=player.autopause, duckvolume=player.ducking_volume)
