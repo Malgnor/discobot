@@ -248,10 +248,15 @@ class PluginManager(Plugin):
 
     @Plugin.route('/')
     def on_plugins_route(self):
-        from flask import render_template
+        from flask import render_template, request
+
+        arg_plugin = request.args.get('plugin', None)
 
         plugins = []
         for plugin in self.bot.plugins.values():
+            if arg_plugin and not plugin.name == arg_plugin:
+                continue
+
             value = {}
             value['name'] = plugin.name
             value['commands'] = []
@@ -265,10 +270,9 @@ class PluginManager(Plugin):
                 command['triggers'] = '|'.join(cmd.triggers)
 
                 if cmd.args:
-                    args = []
+                    command['args'] = []
                     for arg in cmd.args.args:
-                        args.append('{}{}:{}{}'.format('' if arg.required else '[', arg.name, '|'.join(arg.types), '' if arg.required else ']'))
-                    command['args'] = ' '.join(args)
+                        command['args'].append(('{}{}:{}{}'.format('' if arg.required else '[', arg.name, '|'.join(arg.types), '' if arg.required else ']'), arg.required))
 
                 if 'description' in cmd.metadata:
                     command['description'] = cmd.metadata['description']

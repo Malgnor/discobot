@@ -18,7 +18,8 @@
         <li>
           <span class=text-primary>grupo</span>
           <span class=text-success>comando</span>
-          <span class=text-info>argumento:tipo</span>
+          <span class=text-warning>argumento_obrigat&oacute;rio:tipo</span>
+          <span class=text-info>[argumento_opcional:tipo]</span>
           <ul><li>descri&ccedil;&atilde;o</li></ul>
         </li>
       </ul>
@@ -36,7 +37,9 @@
             <li>              
               <span class=text-primary>{{ command.group }}</span>
               <span class=text-success>{{ command.triggers }}</span>
-              <span class=text-info>{{ command.args }}</span>
+              {% for arg in command.args %}
+              <span class={{ 'text-warning' if arg[1] else 'text-info' }}>{{ arg[0] }}</span>
+              {% endfor %}
               {% if command.description %}
               <ul><li>{{ command.description }}</li></ul>
               {% endif %}
