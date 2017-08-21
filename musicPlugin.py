@@ -153,6 +153,15 @@ class MusicPlayer(Player):
         self.queue.clear()
         self.__clear = True
 
+    def tell_or_seek(self, offset=None):
+        if self.now_playing and self.now_playing.source and self.now_playing.source._buffer and self.now_playing.source._buffer.seekable():
+            if offset == None:
+                return self.now_playing.source._buffer.tell()
+            else:
+                self.now_playing.source._buffer.seek(offset)
+                return offset
+        return -1
+
 
 class MusicPlugin(Plugin):
     def load(self, ctx):
@@ -304,6 +313,7 @@ class MusicPlugin(Plugin):
             abort(400)
 
         player = self.get_player(guild)
+        data = {}
 
         if action == 'shuffle':
             player.queue.shuffle()
@@ -321,8 +331,23 @@ class MusicPlugin(Plugin):
             if player.now_playing:
                 player.skip()
             player.resume()
+        elif action == 'status':
+            data['paused'] = True if player.paused else False
+            data['queue'] = len(player.queue)
+            data['items'] = len(player.items)
+            data['curItem'] = None
+            if player.now_playing:
+                data['curItem'] = {
+                    'id': player.now_playing.info['id'],
+                    'duration': player.now_playing.info['duration'],
+                    'fps': player.now_playing.sampling_rate * player.now_playing.sample_size / player.now_playing.frame_size,
+                    'frame': player.tell_or_seek() / player.now_playing.frame_size
+                }
+        elif action == 'info':
+            if player.now_playing:
+                data['info'] = player.now_playing.info
 
-        return jsonify(action=action)
+        return jsonify(action=action, data=data)
 
     @Plugin.route('/player/<int:guild>/<string:action>/<int:index>')
     def on_player_action_route(self, guild, action, index):
@@ -384,3 +409,16 @@ class MusicPlugin(Plugin):
             player.autovolume = player.autopause = False
 
         return jsonify(action='opt', option=option, autovolume=player.autovolume, autopause=player.autopause, duckvolume=player.ducking_volume)
+
+    @Plugin.route('/player/<int:guild>/seek/<int:seconds>')
+    def on_player_seek_route(self, guild, seconds):
+
+        if guild not in self.guilds:
+            abort(400)
+
+        player = self.get_player(guild)
+
+        player.tell_or_seek(
+            seconds * player.now_playing.sampling_rate * player.now_playing.sample_size)
+
+        return jsonify(action='seek', frame=seconds)

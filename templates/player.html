@@ -40,62 +40,74 @@
 {% block content %}
 <div id=content class=container>
 {% if player %}
-  <div class=card-group style="margin-top: 1em;">
-    <div class=card>
-      {% if player.now_playing %}
-        <div class=card-body>
-            <div class="embed-responsive embed-responsive-16by9">
-              <iframe class=embed-responsive-item src="https://www.youtube.com/embed/{{ player.now_playing.info['id'] }}?rel=0" allowfullscreen></iframe>
+  <div class=card style="margin-top: 1em;">
+    {% if player.now_playing %}<h4 class="card-header text-center"><a href={{ player.now_playing.info['webpage_url'] }}>{{ player.now_playing.info['title'] }}</a></h4>{% endif %}
+    <div class="card-body p-0">
+      <div class=card-group>
+        <div class="border-bottom-0 border-left-0 border-top-0 card">
+          {% if player.now_playing %}
+            <div class="card-body p-0 text-center">
+              <a href={{ player.now_playing.info['webpage_url'] }}>
+                <img class="img-fluid img-thumbnail" src={{ player.now_playing.info['thumbnail'] }} alt="{{ player.now_playing.info['title'] }}" >
+              </a>
             </div>
-        </div>
-      {% else %}
-        <div class="card-body text-center">
-          <p class="alert alert-info" role=alert>Playlist vazia.</p>
-        </div>
-      {% endif %}
-    </div>
-    <div class="card text-center">
-      <ul class="list-group list-group-flush">
-        <li class=list-group-item>
-          {% if player.paused %}
-            <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='resume') }} role=button>Resumir</a>
-          {% else %}
-            <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='pause') }} role=button>Pausar</a>
-          {% endif %}
-          <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='skip') }} role=button>Próximo</a>
-        </li>
-        <li class=list-group-item>
-          <div class=input-group>
-            <span class="">🔊</span>
-            <input class="form-control p-0" id=volumeControl type=range min=0 max=1 step=any value={{ player.volume }}>
+            {% else %}
+            <div class="card-body text-center">
+              <p class="alert alert-info" role=alert>Playlist vazia.</p>
+            </div>
+            {% endif %}
           </div>
-        </li>
-        <li class=list-group-item>
-          <form id=opt>
-            <div class=btn-group data-toggle=buttons>
-              <label class="btn btn-secondary {{ 'active' if not (player.autovolume or player.autopause) }}" data-toggle=list data-target=#notDuck role=tab>
-                <input type=radio name=options id=option1 value=none autocomplete=off {{ 'checked' if not (player.autovolume or player.autopause) }}>Nenhum
-              </label>
-              <label class="btn btn-secondary {{ 'active' if player.autovolume }}" data-toggle=list data-target=#duckInput role=tab>
-                <input type=radio name=options id=option2 value=duck autocomplete=off {{ 'checked' if player.autovolume }}>Atenuar
-              </label>
-              <label class="btn btn-secondary {{ 'active' if player.autopause }}" data-toggle=list data-target=#notDuck role=tab>
-                <input type=radio name=options id=option3 value=pause autocomplete=off {{ 'checked' if player.autopause }}>Pausar
-              </label>
-            </div>
-            <div class=tab-content>
-              <div class="tab-pane fade {{ 'show active' if not player.autovolume }}" id=notDuck role=tabpanel></div>
-              <div class="tab-pane fade {{ 'show active' if player.autovolume }}" id=duckInput role=tabpanel>
+          <div class="border-0 card text-center">
+            <ul class="list-group list-group-flush">
+              <li class=list-group-item>
+                {% if player.paused %}
+                <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='resume') }} role=button>Resumir</a>
+                {% else %}
+                <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='pause') }} role=button>Pausar</a>
+                {% endif %}
+                <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='skip') }} role=button>Próximo</a>
+              </li>
+              <li class=list-group-item>
                 <div class=input-group>
-                  <span class="">🔉</span>
-                  <input class="form-control p-0" id=duckVolumeControl name=duckVolume type=range min=0 max=1 step=any value={{ player.ducking_volume }}>
+                  <span class="">🔊</span>
+                  <input class="form-control p-0" id=volumeControl type=range min=0 max=1 step=any value={{ player.volume }}>
                 </div>
-              </div>
-            </div>
-          </form>
-        </li>
-      </ul>
-    </div>
+              </li>
+              <li class=list-group-item>
+                <form id=opt>
+                  <div class=btn-group data-toggle=buttons>
+                    <label class="btn btn-secondary {{ 'active' if not (player.autovolume or player.autopause) }}" data-toggle=list data-target=#notDuck role=tab>
+                      <input type=radio name=options id=option1 value=none autocomplete=off {{ 'checked' if not (player.autovolume or player.autopause) }}>Nenhum
+                    </label>
+                    <label class="btn btn-secondary {{ 'active' if player.autovolume }}" data-toggle=list data-target=#duckInput role=tab>
+                      <input type=radio name=options id=option2 value=duck autocomplete=off {{ 'checked' if player.autovolume }}>Atenuar
+                    </label>
+                    <label class="btn btn-secondary {{ 'active' if player.autopause }}" data-toggle=list data-target=#notDuck role=tab>
+                      <input type=radio name=options id=option3 value=pause autocomplete=off {{ 'checked' if player.autopause }}>Pausar
+                    </label>
+                  </div>
+                  <div class=tab-content>
+                    <div class="tab-pane fade {{ 'show active' if not player.autovolume }}" id=notDuck role=tabpanel></div>
+                    <div class="tab-pane fade {{ 'show active' if player.autovolume }}" id=duckInput role=tabpanel>
+                      <div class=input-group>
+                        <span class="">🔉</span>
+                        <input class="form-control p-0" id=duckVolumeControl name=duckVolume type=range min=0 max=1 step=any value={{ player.ducking_volume }}>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      {% if player.now_playing %}
+      <div class="card-footer p-0">
+        <div class=input-group>
+          <input class="form-control p-0" id=seekControl type=range min=0 max={{ player.now_playing.info['duration'] }} step=1 value={{ player.tell_or_seek() // (player.now_playing.sampling_rate * player.now_playing.sample_size) }} >
+        </div>
+      </div>
+      {% endif %}
   </div>
   <div class=card style="min-height: 20em; margin-top: 1em;">
     <h4 class="card-header text-center">Playlist {{ '%d/%d%s'|format(player.queue|count, player.items|count+player.queue|count, ' 🔄' if player.items else '') }}</h4>
@@ -108,7 +120,8 @@
             <th class=text-center scope=row>{{ loop.index }}</th>
             <td class=text-center><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}>▶️</a></td>
             <td class=text-center><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}>❌</a></td>
-            <td><a href="https://www.youtube.com/watch?v={{ link.info['id'] }}">{{ link.info['title'] }}</a></td>
+            <td class=text-center>{{ '%d:%02d'|format(link.info['duration']//60, link.info['duration']%60) }}</td>
+            <td><a href={{ link.info['webpage_url'] }}>{{ link.info['title'] }}</a></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -131,5 +144,7 @@
 </div>
 {% endblock content %}
 {% block scripts %}
-<script src="{{ url_for('static', filename='player.js') }}?v=1"></script>
+{% if player %}
+  <script src="{{ url_for('static', filename='player.js') }}?v=2"></script>
+{% endif %}
 {% endblock %}

@@ -1,5 +1,5 @@
 $(function () {
-    var playlistCard, vc;
+    var playlistCard, playerData = null, statusInterval, seekSlider, seekInterval, ignoreSeek = false;
 
     var playlistf = function () {
         playlistCard.outerHeight($(window).height() - playlistCard.offset().top - 2);
@@ -13,7 +13,7 @@ $(function () {
                 data: $('form#' + formId).serialize(),
                 success: success
             });
-            return after(this);
+            if (after) return after(this);
         }
     };
 
@@ -22,16 +22,21 @@ $(function () {
     };
 
     onreloadpage = function () {
-        playlistCard = $("#content > div.card");
-        vc = $('input#volumeControl');
+        playlistCard = $("#content > div:nth-child(2)");
+        seekSlider = $('input#seekControl');
 
         playlistf();
 
-        vc.on('input', function () {
-            $.ajax('vol/' + vc.val());
+        $('input#volumeControl').on('input', function () {
+            $.ajax('vol/' + $(this).val());
         });
 
-        $('form#add').on('submit', formf('add', reloadpage, function(element){
+        seekSlider.on('input', function () {
+            $.ajax('seek/' + $(this).val());
+            ignoreSeek = true;
+        });
+
+        $('form#add').on('submit', formf('add', reloadpage, function (element) {
             $('#add > div > div.modal-footer > button.btn.btn-primary').attr('disabled', true);
             return false;
         }));
@@ -55,7 +60,36 @@ $(function () {
     onreloadpage();
 
     $(document).ajaxError(function (event, jqxhr, settings, thrownError) {
-        console.error('url: ' + settings.url + '\nErro: ' + thrownError);
-        reloadpage();
+        console.error('url: ' + settings.url + '\nStatus: ' + jqxhr.status + '\nErro: ' + (thrownError || jqxhr.statusText));
+        if (!(jqxhr.status == 0 || jqxhr.status == 404)) reloadpage();
     });
+
+    statusInterval = setInterval(function () {
+        $.ajax({
+            url: 'status',
+            success: function (data) {
+                ddata = data.data
+                playerData = playerData || ddata
+                if (playerData.paused != ddata.paused || playerData.queue != ddata.queue || playerData.items != ddata.items ||
+                    (playerData.curItem == null && ddata.curItem) || (playerData.curItem && ddata.curItem == null)) {
+                    reloadpage();
+                } else if (playerData.curItem && ddata.curItem) {
+                    if (playerData.curItem.id != ddata.curItem.id) {
+                        reloadpage();
+                    } else if(ignoreSeek){
+                        ignoreSeek = false;
+                    } else if (seekSlider && ddata.curItem.frame) {
+                        seekSlider.val(Math.round(ddata.curItem.frame / ddata.curItem.fps));
+                    }
+                }
+                playerData = ddata
+            }
+        });
+    }, 5000);
+
+    seekInterval = setInterval(function () {
+        if (seekSlider && playerData && !playerData.paused) {
+            seekSlider.val(parseInt(seekSlider.val()) + 1);
+        }
+    }, 1000);
 });
