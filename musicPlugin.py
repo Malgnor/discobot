@@ -1,5 +1,4 @@
 import gevent
-
 from disco.bot import Plugin
 from disco.bot.command import CommandError
 from disco.voice.client import VoiceException
@@ -7,7 +6,6 @@ from disco.voice.packets import VoiceOPCode
 from disco.voice.playable import UnbufferedOpusEncoderPlayable, YoutubeDLInput
 from disco.voice.player import Player
 from disco.voice.queue import PlayableQueue
-
 from flask import abort, flash, jsonify, request
 
 from Utils import remove_angular_brackets
@@ -19,6 +17,7 @@ class CircularQueue(PlayableQueue):
         self._data.append(0)
 
     def get(self):
+        # pylint: disable=W0212
         item = self._get()
         new_item = YoutubeDLInput(item.source._url, item.source._ie_info)
         new_item._info = item.info
@@ -154,20 +153,20 @@ class MusicPlayer(Player):
         self.__clear = True
 
     def tell_or_seek(self, offset=None):
+        # pylint: disable=W0212
         if self.now_playing and self.now_playing.source and self.now_playing.source._buffer and self.now_playing.source._buffer.seekable():
-            if offset == None:
+            if offset is None:
                 return self.now_playing.source._buffer.tell()
-            else:
-                self.now_playing.source._buffer.seek(offset)
-                return offset
+            self.now_playing.source._buffer.seek(offset)
+            return offset
         return -1
 
 
 class MusicPlugin(Plugin):
     def load(self, ctx):
         super(MusicPlugin, self).load(ctx)
-        self.guilds = {}
         self.bot.http.secret_key = 'secret_key_change_this'
+        self.guilds = {}  # pylint: disable=W0201
 
     @Plugin.listen('VoiceStateUpdate')
     def on_voice_update(self, event):
@@ -182,7 +181,7 @@ class MusicPlugin(Plugin):
     @Plugin.command('join', description='Faz o bot se conectar ao seu canal de voz.')
     def on_join(self, event):
         if event.guild.id in self.guilds:
-            return event.msg.reply("Já estou tocando música aqui.")
+            return event.msg.reply('Já estou tocando música aqui.')
 
         state = event.guild.get_member(event.author).get_voice_state()
         if not state:
@@ -203,7 +202,7 @@ class MusicPlugin(Plugin):
 
     def get_player(self, guild_id):
         if guild_id not in self.guilds:
-            raise CommandError("Não estou tocando música aqui.")
+            raise CommandError('Não estou tocando música aqui.')
         return self.guilds.get(guild_id)
 
     @Plugin.command('leave', description='Faz o bot se desconectar do canal de voz.')
@@ -278,7 +277,31 @@ class MusicPlugin(Plugin):
     @Plugin.route('/player/')
     @Plugin.route('/player/<int:guild>/')
     def on_player_route(self, guild=0):
-        from flask import render_template
+        from flask import render_template, redirect, url_for
+
+        try:
+            channelid = int(request.args.get('channel', 0))
+        except ValueError as exception:
+            return jsonify(error='Falha ao converter valor: {}'.format(exception))
+
+        if channelid:
+            try:
+                channel = self.state.channels[channelid]
+            except KeyError as exception:
+                return jsonify(error='Canal não encontrado.\nId: {}'.format(channelid))
+            if channel.is_guild and channel.is_voice:
+                if channel.guild_id in self.guilds:
+                    return jsonify(error='Já estou tocando música nesse servidor.')
+                try:
+                    client = channel.connect()
+                except VoiceException as exception:
+                    return jsonify(error='Falha ao conectar no canal de voz: `{}`'.format(exception))
+
+                self.guilds[channel.guild_id] = MusicPlayer(
+                    client, channel.guild.get_member(self.state.me.id), channel.guild)
+                return redirect(url_for('on_player_route', guild=channel.guild_id))
+            else:
+                return jsonify(error='Canal precisa ser um canal do tipo voz e pertencer a uma guild.\nCanal: {}\nGuild: {}\nVoz: {}'.format(channel, channel.is_guild, channel.is_voice))
 
         return render_template('player.html', player=self.guilds[guild] if guild in self.guilds else None)
 
@@ -304,7 +327,7 @@ class MusicPlugin(Plugin):
             flash('"{}" foi adicionado na playlist.'.format(
                 item.info['title']), 'success')
 
-        return jsonify(action='add')
+        return jsonify(action='add', data={'url': url})
 
     @Plugin.route('/player/<int:guild>/<string:action>')
     def on_player_queue_action_route(self, guild, action):
@@ -346,6 +369,11 @@ class MusicPlugin(Plugin):
         elif action == 'info':
             if player.now_playing:
                 data['info'] = player.now_playing.info
+        elif action == 'leave':
+            player.disconnect()
+            if guild in self.guilds:
+                del self.guilds[guild]
+            flash('O player foi desconectado.', 'warning')
 
         return jsonify(action=action, data=data)
 
@@ -378,7 +406,7 @@ class MusicPlugin(Plugin):
                 flash('Algo deu errado. O índice {} não foi encontrado na playlist.'.format(
                     index), 'warning')
 
-        return jsonify(action=action)
+        return jsonify(action=action, data={'index': index})
 
     @Plugin.route('/player/<int:guild>/vol/<volume>')
     def on_player_volume_route(self, guild, volume):
@@ -388,7 +416,7 @@ class MusicPlugin(Plugin):
 
         self.get_player(guild).volume = float(volume)
 
-        return jsonify(action='volume', volume=self.get_player(guild).volume)
+        return jsonify(action='volume', data={'volume': self.get_player(guild).volume})
 
     @Plugin.route('/player/<int:guild>/opt', methods=['POST'])
     def on_player_opt_route(self, guild):
@@ -408,7 +436,7 @@ class MusicPlugin(Plugin):
         elif option == 'none':
             player.autovolume = player.autopause = False
 
-        return jsonify(action='opt', option=option, autovolume=player.autovolume, autopause=player.autopause, duckvolume=player.ducking_volume)
+        return jsonify(action='opt', data={'option': option, 'autovolume': player.autovolume, 'autopause': player.autopause, 'duckvolume': player.ducking_volume})
 
     @Plugin.route('/player/<int:guild>/seek/<int:seconds>')
     def on_player_seek_route(self, guild, seconds):
@@ -421,4 +449,4 @@ class MusicPlugin(Plugin):
         player.tell_or_seek(
             seconds * player.now_playing.sampling_rate * player.now_playing.sample_size)
 
-        return jsonify(action='seek', frame=seconds)
+        return jsonify(action='seek', data={'frame': seconds})
