@@ -1,0 +1,13 @@
+.slider-group {
+    border: 1px solid #dfdfdf;
+    border-radius: 0.25em;
+    background-color: #f7f7f7;
+}
+
+.slider-group .slider-group-addon:not(:last-child) {
+    border-right: inherit;
+}
+
+.slider-group .slider-group-addon:not(:first-child) {
+    border-left: inherit;
+}

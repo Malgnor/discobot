@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% block title %}MusicPlayer{{ ' - %s'|format(player.guild.name) if player }}{% endblock title %}
 {% block head %}
-{{ super() }}
 <meta property=og:title content="{{ self.title() }}" />
 <meta property=og:type content=website />
 <meta property=og:site_name content=MusicPlayer />
 <meta property=og:description content="Controle o bot atrav&eacute;s da web."/>
+{{ super() }}
+<link rel=stylesheet href="{{ url_for('static', filename='player.css') }}">
 {% endblock %}
 {% block modalblock %}
 {% if player %}
@@ -68,9 +69,10 @@
                 <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='skip') }} role=button>Próximo</a>
               </li>
               <li class=list-group-item>
-                <div class=input-group>
-                  <span class="">🔊</span>
-                  <input class="form-control p-0" id=volumeControl type=range min=0 max=1 step=any value={{ player.volume }}>
+                <div class="input-group slider-group">
+                  <span class=slider-group-addon >🔊</span>
+                  <input class="form-control p-0" id=volumeControl type=range min=0 max=1 step=any value={{ player.volume }} >
+                  <span class=slider-group-addon style="min-width: 3em;">10%</span>                        
                 </div>
               </li>
               <li class=list-group-item>
@@ -89,9 +91,10 @@
                   <div class=tab-content>
                     <div class="tab-pane fade {{ 'show active' if not player.autovolume }}" id=notDuck role=tabpanel></div>
                     <div class="tab-pane fade {{ 'show active' if player.autovolume }}" id=duckInput role=tabpanel>
-                      <div class=input-group>
-                        <span class="">🔉</span>
-                        <input class="form-control p-0" id=duckVolumeControl name=duckVolume type=range min=0 max=1 step=any value={{ player.ducking_volume }}>
+                      <div class="input-group slider-group" style="margin-top: 0.25em;">
+                        <span class=slider-group-addon >🔉</span>
+                        <input class="form-control p-0" id=duckVolumeControl name=duckVolume type=range min=0 max=1 step=any value={{ player.ducking_volume }} >
+                        <span class=slider-group-addon style="min-width: 3em;">10%</span>                        
                       </div>
                     </div>
                   </div>
@@ -105,6 +108,7 @@
       <div class="card-footer p-0">
         <div class=input-group>
           <input class="form-control p-0" id=seekControl type=range min=0 max={{ player.now_playing.info['duration'] }} step=1 value={{ player.tell_or_seek() // (player.now_playing.sampling_rate * player.now_playing.sample_size) }} >
+          <span class=text-center style="border-left: 1px solid #dfdfdf; min-width: 6em" data-isseek>00:00</span>
         </div>
       </div>
       {% endif %}
@@ -117,10 +121,10 @@
         <tbody>
           {% for link in player.queue %}
           <tr {{ 'class=table-primary' if link.info['id'] == player.now_playing.info['id'] }}>
-            <th class=text-center scope=row>{{ loop.index }}</th>
-            <td class=text-center><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}>▶️</a></td>
-            <td class=text-center><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}>❌</a></td>
-            <td class=text-center>{{ '%d:%02d'|format(link.info['duration']//60, link.info['duration']%60) }}</td>
+            <th class=text-center scope=row style="max-width: 1em;">{{ loop.index }}</th>
+            <td class=text-center style="max-width: 0.75em;"><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}>▶️</a></td>
+            <td class=text-center style="max-width: 0.75em;"><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}>❌</a></td>
+            <td class=text-center style="max-width: 1.5em;">{{ '%d:%02d'|format(link.info['duration']//60, link.info['duration']%60) }}</td>
             <td><a href={{ link.info['webpage_url'] }}>{{ link.info['title'] }}</a></td>
           </tr>
           {% endfor %}
@@ -145,6 +149,6 @@
 {% endblock content %}
 {% block scripts %}
 {% if player %}
-  <script src="{{ url_for('static', filename='player.js') }}?v=2"></script>
+  <script src="{{ url_for('static', filename='player.js') }}?v=3"></script>
 {% endif %}
 {% endblock %}

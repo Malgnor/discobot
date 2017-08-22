@@ -1,3 +1,13 @@
+String.prototype.toMMSS = function () {
+    var seconds = parseInt(this);
+    var minutes = Math.floor(seconds / 60);
+    seconds -= minutes*60;
+
+    if (minutes < 10) {minutes = "0"+minutes;}
+    if (seconds < 10) {seconds = "0"+seconds;}
+    return minutes+':'+seconds;
+};
+
 $(function () {
     var playlistCard, playerData = null, statusInterval, seekSlider, seekInterval, ignoreSeek = false;
 
@@ -21,6 +31,11 @@ $(function () {
         $('body').load(' #mainDiv', onreloadpage);
     };
 
+    var updateSeekSlider = function(slider){
+        slider = slider || seekSlider
+        slider.next().text(slider.val().toMMSS()+'/'+slider.attr('max').toMMSS());        
+    };
+
     onreloadpage = function () {
         playlistCard = $("#content > div:nth-child(2)");
         seekSlider = $('input#seekControl');
@@ -29,20 +44,24 @@ $(function () {
 
         $('input#volumeControl').on('input', function () {
             $.ajax('vol/' + $(this).val());
+            $(this).next().text(Math.round($(this).val()*100)+'%');
         });
 
         seekSlider.on('input', function () {
             $.ajax('seek/' + $(this).val());
             ignoreSeek = true;
+            updateSeekSlider();
         });
 
-        $('form#add').on('submit', formf('add', reloadpage, function (element) {
+        $('form#add').on('submit', formf('add', reloadpage, function () {
             $('#add > div > div.modal-footer > button.btn.btn-primary').attr('disabled', true);
             return false;
         }));
 
         $('form#opt > div.btn-group').on('change', formf('opt'));
-        $('input#duckVolumeControl').on('input', formf('opt'));
+        $('input#duckVolumeControl').on('input', formf('opt', null, function(element){
+            $(element).next().text(Math.round($(element).val()*100)+'%');            
+        }));
 
         $('.alert').on('closed.bs.alert', playlistf);
         $('[data-toggle="list"]').on('shown.bs.tab', playlistf);
@@ -55,6 +74,14 @@ $(function () {
             });
             return false;
         });
+        
+        $('[type="range"]~span').each(function(){
+            if($(this).data('isseek') == undefined){
+                $(this).text(Math.round($(this).prev().val()*100)+'%');
+            } else {
+                $(this).text($(this).prev().val().toMMSS()+'/'+$(this).prev().attr('max').toMMSS());                
+            }
+        });
     };
 
     onreloadpage();
@@ -62,6 +89,10 @@ $(function () {
     $(document).ajaxError(function (event, jqxhr, settings, thrownError) {
         console.error('url: ' + settings.url + '\nStatus: ' + jqxhr.status + '\nErro: ' + (thrownError || jqxhr.statusText));
         if (!(jqxhr.status == 0 || jqxhr.status == 404)) reloadpage();
+        else {
+            clearInterval(seekInterval)
+            clearInterval(statusInterval);
+        }
     });
 
     statusInterval = setInterval(function () {
@@ -80,6 +111,7 @@ $(function () {
                         ignoreSeek = false;
                     } else if (seekSlider && ddata.curItem.frame) {
                         seekSlider.val(Math.round(ddata.curItem.frame / ddata.curItem.fps));
+                        updateSeekSlider();
                     }
                 }
                 playerData = ddata
@@ -90,6 +122,7 @@ $(function () {
     seekInterval = setInterval(function () {
         if (seekSlider && playerData && !playerData.paused) {
             seekSlider.val(parseInt(seekSlider.val()) + 1);
+            updateSeekSlider();
         }
     }, 1000);
 });
