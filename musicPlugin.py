@@ -21,7 +21,7 @@ class CircularQueue(PlayableQueue):
         item = self._get()
         new_item = YoutubeDLInput(item.source._url, item.source._ie_info)
         new_item._info = item.info
-        self.append(new_item.pipe(UnbufferedOpusEncoderPlayable))
+        self.append(new_item.pipe(UnbufferedOpusEncoderPlayable, library_path="C:/lib/libopus-0.x64.dll"))
         return item
 
     def remove(self, index):
@@ -144,7 +144,7 @@ class MusicPlayer(Player):
     def add_items(self):
         while True:
             self.queue.append(self.items.get().pipe(
-                UnbufferedOpusEncoderPlayable))
+                UnbufferedOpusEncoderPlayable, library_path="C:/lib/libopus-0.x64.dll"))
             if self.__clear:
                 self.__clear = False
                 self.queue.clear()
@@ -217,7 +217,7 @@ class MusicPlugin(Plugin):
     @Plugin.command('play', '<url:str>', description='Adiciona um item na playlist.')
     def on_play(self, event, url):
         self.get_player(event.guild.id).queue.append(YoutubeDLInput(remove_angular_brackets(
-            url)).pipe(UnbufferedOpusEncoderPlayable))
+            url)).pipe(UnbufferedOpusEncoderPlayable, library_path="C:/lib/libopus-0.x64.dll"))
 
     @Plugin.command('playlist', '<url:str>', description='Adiciona vários items na playlist.')
     def on_playlist(self, event, url):
@@ -325,7 +325,7 @@ class MusicPlugin(Plugin):
             item = YoutubeDLInput(url)
 
             self.get_player(guild).queue.append(
-                item.pipe(UnbufferedOpusEncoderPlayable))
+                item.pipe(UnbufferedOpusEncoderPlayable, library_path="C:/lib/libopus-0.x64.dll"))
             flash('"{}" foi adicionado na playlist.'.format(
                 item.info['title']), 'success')
 
