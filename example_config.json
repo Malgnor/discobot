@@ -29,6 +29,11 @@
         "http_port": 7575,
         "http_root_path": null
     },
+    "state": {
+        "track_messages": true,
+        "track_messages_size": 100,
+        "sync_guild_members": true
+    },
     "token": "Your.Discord.token.here",
     "shard_id": 0,
     "shard_count": 1,

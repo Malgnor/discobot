@@ -6,7 +6,7 @@ from disco.voice.packets import VoiceOPCode
 from disco.voice.playable import UnbufferedOpusEncoderPlayable, YoutubeDLInput
 from disco.voice.player import Player
 from disco.voice.queue import PlayableQueue
-from flask import abort, flash, jsonify, request
+from flask import abort, flash, jsonify, request, redirect, url_for
 
 from Utils import remove_angular_brackets
 
@@ -113,6 +113,8 @@ class MusicPlayer(Player):
         self.__autovolume = value
         if value:
             self.autopause = False
+        else:
+            self.update_volume()
 
     @property
     def volume(self):
@@ -277,7 +279,7 @@ class MusicPlugin(Plugin):
     @Plugin.route('/player/')
     @Plugin.route('/player/<int:guild>/')
     def on_player_route(self, guild=0):
-        from flask import render_template, redirect, url_for
+        from flask import render_template
 
         try:
             channelid = int(request.args.get('channel', 0))
@@ -374,6 +376,7 @@ class MusicPlugin(Plugin):
             if guild in self.guilds:
                 del self.guilds[guild]
             flash('O player foi desconectado.', 'warning')
+            return redirect(url_for('on_player_route'))
 
         return jsonify(action=action, data=data)
 

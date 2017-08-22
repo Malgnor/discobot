@@ -2,8 +2,30 @@ import os
 
 from disco.bot import BotConfig
 from disco.client import ClientConfig
+from disco.state import StateConfig
 from disco.types.message import MessageEmbed
 from disco.util.serializer import Serializer
+
+# http://flask.pocoo.org/snippets/116/
+class ServerSentEvent(object):
+
+    def __init__(self, data):
+        self.data = data
+        self.event = None
+        self.id = None
+        self.desc_map = {
+            self.data: "data",
+            self.event: "event",
+            self.id: "id"
+        }
+
+    def encode(self):
+        if not self.data:
+            return ""
+        lines = ["%s: %s" % (v, k)
+                 for k, v in self.desc_map.items() if k]
+
+        return "%s\n\n" % "\n".join(lines)
 
 
 def attachment_to_embed(attachments):
@@ -72,12 +94,16 @@ def save_bot_config(bot, path):
         k.startswith('__') and k.endswith('__'))]
     bot_keys = [k for k in BotConfig.__dict__ if not(
         k.startswith('__') and k.endswith('__'))]
+    state_keys = [k for k in StateConfig.__dict__ if not(
+        k.startswith('__') and k.endswith('__'))]
     bot_keys.append('plugins')
 
     to_save = {}
     to_save['bot'] = {}
+    to_save['state'] = {}
     client_config = bot.client.config.to_dict()
     bot_config = bot.config.to_dict()
+    state_config = bot.client.state.config.to_dict()
 
     for k in client_keys:
         to_save[k] = client_config[k]
@@ -85,6 +111,8 @@ def save_bot_config(bot, path):
         to_save['bot'][k] = bot_config[k]
     for k, value in to_save['bot']['levels'].items():
         to_save['bot']['levels'][k] = str(value)
+    for k in state_keys:
+        to_save['state'][k] = state_config[k]
 
     _, ext = os.path.splitext(path)
     Serializer.check_format(ext[1:])
@@ -96,17 +124,20 @@ def save_bot_config(bot, path):
 
 
 def load_bot_config(bot, path):
-    if os.path.exists(path):
-        bot.client.config = ClientConfig.from_file(path)
-    else:
+    if not os.path.exists(path):
         return False
 
-    bot.config = BotConfig(bot.client.config.bot) if hasattr(
-        bot.client.config, 'bot') else BotConfig()
+    bot.client.config = ClientConfig.from_file(path)
+
+    bot.config = BotConfig(bot.client.config.get('bot'))
+    bot.client.state.config = StateConfig(bot.client.config.get('state'))
+
     return True
 
 
 def remove_angular_brackets(url):
-    if url[0] == '<' and url[-1] == '>':
-        return url[1:-1]
+    if url.startswith('<'):
+        url = url[1:]
+    if url.endswith('>'):
+        url = url[:-1]
     return url
