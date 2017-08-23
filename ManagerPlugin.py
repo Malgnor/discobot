@@ -5,7 +5,7 @@ from disco.bot.command import CommandLevels
 from Utils import save_plugin_config, load_plugin_config, save_bot_config, load_bot_config
 
 
-class PluginManager(Plugin):
+class ManagerPlugin(Plugin):
     @Plugin.command('storage save', group='bot', description='Força o salvamento dos dados do bot.', hide=True)
     def on_botstoragesave_command(self, event):
         if self.storage:

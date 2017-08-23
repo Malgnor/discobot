@@ -3,7 +3,7 @@
         "levels": {},
         "plugins": [
             //"MusicPlugin",
-            //"PluginManager"
+            //"ManagerPlugin"
         ],
         "plugin_config": {},
         "commands_enabled": true,
