@@ -292,15 +292,15 @@ class MusicPlugin(Plugin):
             except KeyError as exception:
                 return jsonify(error='Canal não encontrado.\nId: {}'.format(channelid))
             if channel.is_guild and channel.is_voice:
-                if channel.guild_id in self.guilds:
-                    return jsonify(error='Já estou tocando música nesse servidor.')
-                try:
-                    client = channel.connect()
-                except VoiceException as exception:
-                    return jsonify(error='Falha ao conectar no canal de voz: `{}`'.format(exception))
+                if channel.guild_id not in self.guilds:
+                    try:
+                        client = channel.connect()
+                    except VoiceException as exception:
+                        return jsonify(error='Falha ao conectar no canal de voz: `{}`'.format(exception))
 
-                self.guilds[channel.guild_id] = MusicPlayer(
-                    client, channel.guild.get_member(self.state.me.id), channel.guild)
+                    self.guilds[channel.guild_id] = MusicPlayer(
+                        client, channel.guild.get_member(self.state.me.id), channel.guild)
+                #return jsonify(error='Já estou tocando música nesse servidor.')
                 return redirect(url_for('on_player_route', guild=channel.guild_id))
             else:
                 return jsonify(error='Canal precisa ser um canal do tipo voz e pertencer a uma guild.\nCanal: {}\nGuild: {}\nVoz: {}'.format(channel, channel.is_guild, channel.is_voice))

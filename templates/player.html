@@ -120,13 +120,23 @@
       <table class="table table-sm table-hover m-0">
         <tbody>
           {% for link in player.queue %}
-          <tr {{ 'class=table-primary' if link.info['id'] == player.now_playing.info['id'] }}>
-            <th class=text-center scope=row style="max-width: 1em;">{{ loop.index }}</th>
-            <td class=text-center style="max-width: 0.75em;"><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}>▶️</a></td>
-            <td class=text-center style="max-width: 0.75em;"><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}>❌</a></td>
-            <td class=text-center style="max-width: 1.5em;">{{ '%d:%02d'|format(link.info['duration']//60, link.info['duration']%60) }}</td>
-            <td><a href={{ link.info['webpage_url'] }}>{{ link.info['title'] }}</a></td>
-          </tr>
+            {% if link.info %}
+            <tr {{ 'class=table-primary' if link.info['id'] == player.now_playing.info['id'] }}>
+              <th class=text-center scope=row >{{ loop.index }}</th>
+              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}>▶️</a></td>
+              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}>❌</a></td>
+              <td class=text-center >{{ '%d:%02d'|format(link.info['duration']//60, link.info['duration']%60) }}</td>
+              <td><a href={{ link.info['webpage_url'] }}>{{ link.info['title'] }}</a></td>
+            </tr>
+            {% else %}
+            <tr>
+              <th class=text-center scope=row >{{ loop.index }}</th>
+              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}>▶️</a></td>
+              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}>❌</a></td>
+              <td class=text-center ></td>
+              <td></td>
+            </tr>
+            {% endif %}
           {% endfor %}
         </tbody>
       </table>
