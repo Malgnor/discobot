@@ -21,7 +21,7 @@ class CircularQueue(PlayableQueue):
         item = self._get()
         new_item = YoutubeDLInput(item.source._url, item.source._ie_info)
         new_item._info = item.info
-        self.append(new_item.pipe(UnbufferedOpusEncoderPlayable, library_path="C:/lib/libopus-0.x64.dll"))
+        self.append(new_item.pipe(UnbufferedOpusEncoderPlayable))
         return item
 
     def remove(self, index):
@@ -144,7 +144,7 @@ class MusicPlayer(Player):
     def add_items(self):
         while True:
             self.queue.append(self.items.get().pipe(
-                UnbufferedOpusEncoderPlayable, library_path="C:/lib/libopus-0.x64.dll"))
+                UnbufferedOpusEncoderPlayable))
             if self.__clear:
                 self.__clear = False
                 self.queue.clear()
@@ -197,6 +197,9 @@ class MusicPlugin(Plugin):
         self.guilds[event.guild.id] = MusicPlayer(
             client, event.guild.get_member(self.state.me.id), event.guild)
 
+        event.msg.reply(
+            'http://bot.brodi.design/player/{}/'.format(event.guild.id))
+
         self.guilds[event.guild.id].complete.wait()
 
         if event.guild.id in self.guilds:
@@ -217,7 +220,7 @@ class MusicPlugin(Plugin):
     @Plugin.command('play', '<url:str>', description='Adiciona um item na playlist.')
     def on_play(self, event, url):
         self.get_player(event.guild.id).queue.append(YoutubeDLInput(remove_angular_brackets(
-            url)).pipe(UnbufferedOpusEncoderPlayable, library_path="C:/lib/libopus-0.x64.dll"))
+            url)).pipe(UnbufferedOpusEncoderPlayable))
 
     @Plugin.command('playlist', '<url:str>', description='Adiciona vários items na playlist.')
     def on_playlist(self, event, url):
@@ -325,7 +328,7 @@ class MusicPlugin(Plugin):
             item = YoutubeDLInput(url)
 
             self.get_player(guild).queue.append(
-                item.pipe(UnbufferedOpusEncoderPlayable, library_path="C:/lib/libopus-0.x64.dll"))
+                item.pipe(UnbufferedOpusEncoderPlayable))
             flash('"{}" foi adicionado na playlist.'.format(
                 item.info['title']), 'success')
 

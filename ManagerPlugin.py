@@ -195,56 +195,8 @@ class ManagerPlugin(Plugin):
 
     @Plugin.command('help', '[plugin:str]', aliases=['ajuda', 'command', 'commands'], description='Mostra a lista de comandos disponíveis para você.')
     def on_help_command(self, event, plugin=None):
-        self.client.api.channels_typing(event.msg.channel_id)
 
-        plugins = self.bot.plugins.values()
-
-        if plugin:
-            if plugin in self.bot.plugins:
-                plugins = [self.bot.plugins[plugin]]
-            else:
-                event.msg.reply('Plugin {} não encontrado.'.format(plugin))
-                return
-
-        commands = []
-        for plugin_ in plugins:
-            text = '{}```css\n'.format(plugin_.name)
-            count = 0
-            level = plugin_.bot.get_level(
-                event.msg.author if not event.msg.guild else event.msg.guild.get_member(event.msg.author))
-            for command in plugin_.commands:
-                if ((command.level and level >= command.level) or not command.level) and not ('hide' in command.metadata and command.metadata['hide']):
-                    count += 1
-                    text += '\n'
-                    info = []
-                    if command.group:
-                        info.append('{}'.format(command.group))
-                    info.append('{}'.format('|'.join(command.triggers)))
-                    if command.args:
-                        args = []
-                        for arg in command.args.args:
-                            args.append('{}{}:{}{}'.format(
-                                '' if arg.required else '[', arg.name, '|'.join(arg.types), '' if arg.required else ']'))
-                        info.append('{}'.format(' '.join(args)))
-                    info.append('\n')
-                    if command.level:
-                        info.append('\tLevel: {}'.format(
-                            CommandLevels[command.level]))
-                    if 'description' in command.metadata:
-                        info.append('\tDescription: {}'.format(
-                            command.metadata['description']))
-
-                    text += ' '.join(info)
-            text += '```'
-            if count:
-                commands.append(text)
-        to_send = ''
-        for command in commands:
-            if len(to_send + command) > 2000:
-                event.msg.reply(to_send)
-                to_send = ''
-            to_send += command
-        event.msg.reply(to_send)
+        return event.msg.reply('http://bot.brodi.design/{}'.format('?plugin={}'.format(plugin) if plugin else ''))
 
     @Plugin.route('/')
     def on_plugins_route(self):
@@ -282,3 +234,7 @@ class ManagerPlugin(Plugin):
             plugins.append(value)
 
         return render_template('plugins.html', plugins=plugins)
+
+    @Plugin.route('/_ah/health')
+    def on_health_check_route(self):
+        return 'Ok!'
