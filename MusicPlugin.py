@@ -162,7 +162,6 @@ class MusicPlayer(Player):
 class MusicPlugin(Plugin):
     def load(self, ctx):
         super(MusicPlugin, self).load(ctx)
-        self.bot.http.secret_key = 'secret_key_change_this'
         self.guilds = {}  # pylint: disable=W0201
 
     @Plugin.listen('VoiceStateUpdate')
@@ -191,6 +190,10 @@ class MusicPlugin(Plugin):
 
         self.guilds[event.guild.id] = MusicPlayer(
             client, event.guild.get_member(self.state.me.id), event.guild)
+
+        if self.bot.config.http_enabled:
+            with self.bot.http.app_context():
+                event.msg.reply(url_for('on_player_route', guild=event.guild.id))
 
         self.guilds[event.guild.id].complete.wait()
 
@@ -295,7 +298,7 @@ class MusicPlugin(Plugin):
 
                     self.guilds[channel.guild_id] = MusicPlayer(
                         client, channel.guild.get_member(self.state.me.id), channel.guild)
-                #return jsonify(error='Já estou tocando música nesse servidor.')
+
                 return redirect(url_for('on_player_route', guild=channel.guild_id))
             else:
                 return jsonify(error='Canal precisa ser um canal do tipo voz e pertencer a uma guild.\nCanal: {}\nGuild: {}\nVoz: {}'.format(channel, channel.is_guild, channel.is_voice))

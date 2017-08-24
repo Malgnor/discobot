@@ -195,6 +195,12 @@ class ManagerPlugin(Plugin):
 
     @Plugin.command('help', '[plugin:str]', aliases=['ajuda', 'command', 'commands'], description='Mostra a lista de comandos disponíveis para você.')
     def on_help_command(self, event, plugin=None):
+
+        if self.bot.config.http_enabled:
+            with self.bot.http.app_context():
+                from flask import url_for
+                return event.msg.reply(url_for('on_plugins_route', plugin=plugin if plugin else None))
+
         self.client.api.channels_typing(event.msg.channel_id)
 
         plugins = self.bot.plugins.values()
