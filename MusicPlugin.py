@@ -12,10 +12,6 @@ from Utils import remove_angular_brackets
 
 
 class CircularQueue(PlayableQueue):
-    def __init__(self):
-        super(CircularQueue, self).__init__()
-        self._data.append(0)
-
     def get(self):
         # pylint: disable=W0212
         item = self._get()
@@ -40,7 +36,6 @@ class CircularQueue(PlayableQueue):
 class MusicPlayer(Player):
     def __init__(self, client, guild_member, guild):
         super(MusicPlayer, self).__init__(client, CircularQueue())
-        self.queue.clear()
         self.guild_member = guild_member
         self.guild = guild
         self.nick = guild_member.nick
