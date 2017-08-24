@@ -3,6 +3,11 @@ env: flex
 
 health_check:
   enable_health_check: False
+  check_interval_sec: 10
+  timeout_sec: 2
+  unhealthy_threshold: 2
+  healthy_threshold: 2
+  restart_threshold: 100
 
 manual_scaling:
   instances: 1
