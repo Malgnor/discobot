@@ -2,8 +2,8 @@
     "bot": {
         "levels": {},
         "plugins": [
-            //"MusicPlugin",
-            //"ManagerPlugin"
+            "MusicPlugin",
+            "ManagerPlugin"
         ],
         "plugin_config": {},
         "commands_enabled": true,
@@ -27,7 +27,11 @@
         "http_enabled": false,
         "http_host": "0.0.0.0",
         "http_port": 7575,
-        "http_root_path": null
+        "http_root_path": "",
+        "http_config": {
+            "SECRET_KEY": "some random string",
+            "SERVER_NAME": "mydomain.com"
+        }
     },
     "state": {
         "track_messages": true,
