@@ -17,7 +17,8 @@ class CircularQueue(PlayableQueue):
         item = self._get()
         new_item = YoutubeDLInput(item.source._url, item.source._ie_info)
         new_item._info = item.info
-        self.append(new_item.pipe(UnbufferedOpusEncoderPlayable, library_path="C:/lib/libopus-0.x64.dll"))
+        self.append(new_item.pipe(UnbufferedOpusEncoderPlayable,
+                                  library_path="C:/lib/libopus-0.x64.dll"))
         return item
 
     def remove(self, index):
@@ -193,7 +194,8 @@ class MusicPlugin(Plugin):
 
         if self.bot.config.http_enabled:
             with self.bot.http.app_context():
-                event.msg.reply(url_for('on_player_route', guild=event.guild.id))
+                event.msg.reply(
+                    url_for('on_player_route', guild=event.guild.id))
 
         self.guilds[event.guild.id].complete.wait()
 
@@ -304,6 +306,32 @@ class MusicPlugin(Plugin):
                 return jsonify(error='Canal precisa ser um canal do tipo voz e pertencer a uma guild.\nCanal: {}\nGuild: {}\nVoz: {}'.format(channel, channel.is_guild, channel.is_voice))
 
         return render_template('player.html', player=self.guilds[guild] if guild in self.guilds else None)
+
+    @Plugin.route('/player/join/')
+    def on_player_join_route(self):
+        from flask import render_template
+
+        info = {
+            'players': [],
+            'guilds': []
+        }
+
+        for guild in self.state.guilds.values():
+            if guild.id in self.guilds:
+                info['players'].append((guild.name, guild.id))
+                continue
+
+            channels = []
+            for channel in guild.channels.values():
+                if not channel.is_voice:
+                    continue
+
+                channels.append((channel.name, channel.id))
+
+            if channels:
+                info['guilds'].append((guild.name, guild.id, channels))
+
+        return render_template('player_list.html', info=info)
 
     @Plugin.route('/player/<int:guild>/add', methods=['POST'])
     def on_player_add_route(self, guild):

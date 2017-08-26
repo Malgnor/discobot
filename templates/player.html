@@ -42,7 +42,10 @@
 <div id=content class=container>
 {% if player %}
   <div class=card style="margin-top: 1em;">
-    {% if player.now_playing %}<h4 class="card-header text-center"><a href={{ player.now_playing.info['webpage_url'] }}>{{ player.now_playing.info['title'] }}</a></h4>{% endif %}
+    <h4 class="card-header text-center">
+      {% if player.now_playing %}<a href={{ player.now_playing.info['webpage_url'] }}>{{ player.now_playing.info['title'] }}</a>{% endif %}
+      <a id=closeBtn class="btn btn-danger float-right" href={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='leave') }} >✖️</a>
+    </h4>
     <div class="card-body p-0">
       <div class=card-group>
         <div class="border-bottom-0 border-left-0 border-top-0 card">
@@ -159,6 +162,6 @@
 {% endblock content %}
 {% block scripts %}
 {% if player %}
-  <script src="{{ url_for('static', filename='player.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='player.js') }}?v=4"></script>
 {% endif %}
 {% endblock %}

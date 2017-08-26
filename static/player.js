@@ -82,6 +82,10 @@ $(function () {
                 $(this).text($(this).prev().val().toMMSS()+'/'+$(this).prev().attr('max').toMMSS());                
             }
         });
+
+        $('#closeBtn').on('click', function(){
+            return confirm('Desconectar o player?');
+        });
     };
 
     onreloadpage();
