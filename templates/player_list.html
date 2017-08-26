@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}DiscoBot - MusicPlayer{% endblock title %}
+{% block head %}
+{{ super() }}
+<meta property=og:title content="{{ self.title() }}"/>
+<meta property=og:type content=website />
+<meta property=og:site_name content=DiscoBot />
+<meta property=og:description content="Lista dos players e dos canais disponíveis para o player."/>
+{% endblock %}
+{% block content %}
+<div id=content class=container>
+  {% for player in info.players %}
+  <div class=card>
+    <a href={{ url_for('on_player_route', guild=player[1]) }} >
+      <h5 class=card-header>{{ player[0] }}</h5>
+    </a>
+  </div>
+  {% endfor %}
+  {% for guild in info.guilds %}
+    <div class=card>
+      <a data-toggle=collapse href={{ '#%sBody'|format(guild[1]) }} aria-expanded=false aria-controls={{ '%sBody'|format(guild[1]) }}>
+        <h5 class=card-header>{{ guild[0] }}</h5>
+      </a>
+      <div class=collapse id={{ '%sBody'|format(guild[1]) }}>
+        <div class=card-body>
+          <ul>
+          {% for channel in guild[2] %}
+            <li>              
+              <a href={{ url_for('on_player_route', channel=channel[1]) }} >{{ channel[0] }}</a>
+            </li>
+          {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock content %}
