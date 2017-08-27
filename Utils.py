@@ -9,10 +9,10 @@ from disco.util.serializer import Serializer
 # http://flask.pocoo.org/snippets/116/
 class ServerSentEvent(object):
 
-    def __init__(self, data):
-        self.data = data
-        self.event = None
-        self.id = None
+    def __init__(self, **kwargs):
+        self.data = kwargs.pop('data', None)
+        self.event = kwargs.pop('event', None)
+        self.id = kwargs.pop('id', None)
         self.desc_map = {
             self.data: "data",
             self.event: "event",

@@ -117,11 +117,11 @@
       {% endif %}
   </div>
   <div class=card style="min-height: 20em; margin-top: 1em;">
-    <h4 class="card-header text-center">Playlist {{ '%d/%d%s'|format(player.queue|count, player.items|count+player.queue|count, ' 🔄' if player.items else '') }}</h4>
+    <h4 id=playlistHeader class="card-header text-center">Playlist {{ '%d/%d%s'|format(player.queue|count, player.items|count+player.queue|count, ' 🔄' if player.items|count else '') }}</h4>
     {% if player.queue %}
     <div class="card-body p-0" style="overflow-y: auto">
       <table class="table table-sm table-hover m-0">
-        <tbody>
+        <tbody id=tableList >
           {% for link in player.queue %}
             {% if link.info %}
             <tr {{ 'class=table-primary' if link.info['id'] == player.now_playing.info['id'] }}>
@@ -162,6 +162,6 @@
 {% endblock content %}
 {% block scripts %}
 {% if player %}
-  <script src="{{ url_for('static', filename='player.js') }}?v=4"></script>
+  <script src="{{ url_for('static', filename='player.js') }}?v=5"></script>
 {% endif %}
 {% endblock %}

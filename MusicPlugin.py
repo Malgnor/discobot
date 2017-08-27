@@ -1,3 +1,5 @@
+import json
+
 import gevent
 from disco.bot import Plugin
 from disco.bot.command import CommandError
@@ -6,9 +8,9 @@ from disco.voice.packets import VoiceOPCode
 from disco.voice.playable import UnbufferedOpusEncoderPlayable, YoutubeDLInput
 from disco.voice.player import Player
 from disco.voice.queue import PlayableQueue
-from flask import abort, flash, jsonify, request, redirect, url_for
+from flask import abort, flash, jsonify, redirect, request, url_for
 
-from Utils import remove_angular_brackets
+from Utils import ServerSentEvent, remove_angular_brackets
 
 
 class CircularQueue(PlayableQueue):
@@ -48,6 +50,7 @@ class MusicPlayer(Player):
         self.__clear = False
         self.anyonespeaking = False
         self.items = PlayableQueue()
+        self.listeners = []
 
         gevent.spawn(self.add_items)
 
@@ -56,6 +59,7 @@ class MusicPlayer(Player):
                        self.on_disconnect_or_empty_queue)
         self.events.on(self.Events.DISCONNECT,
                        self.on_disconnect_or_empty_queue)
+        self.events.on(self.Events.FIRST_FRAME, self.on_first_frame)
         self.client.packets.on(VoiceOPCode.SPEAKING, self.on_speaking)
 
     def on_start_play(self, item):
@@ -68,6 +72,9 @@ class MusicPlayer(Player):
 
     def on_disconnect_or_empty_queue(self):
         self.guild_member.set_nickname(self.nick)
+
+    def on_first_frame(self):
+        self.add_event(event='firstframe', data=json.dumps({'frame': 0}))
 
     def on_speaking(self, data):
         if (not self.autopause) and (not self.autovolume):
@@ -120,6 +127,7 @@ class MusicPlayer(Player):
     def volume(self, value):
         self.__base_volume = value
         self.update_volume()
+        self.add_event(event='volumeupdate', data=json.dumps({'vol': value}))
 
     @property
     def ducking_volume(self):
@@ -129,6 +137,7 @@ class MusicPlayer(Player):
     def ducking_volume(self, value):
         self.__ducking_volume = value
         self.update_volume()
+        self.add_event(event='volumeupdate', data=json.dumps({'dvol': value}))
 
     def update_volume(self):
         if isinstance(self.now_playing, UnbufferedOpusEncoderPlayable):
@@ -139,8 +148,11 @@ class MusicPlayer(Player):
 
     def add_items(self):
         while True:
-            self.queue.append(self.items.get().pipe(
-                UnbufferedOpusEncoderPlayable, library_path="C:/lib/libopus-0.x64.dll"))
+            item = self.items.get().pipe(UnbufferedOpusEncoderPlayable,
+                                         library_path="C:/lib/libopus-0.x64.dll")
+            self.queue.append(item)
+            self.add_event(event='playlistadd', data=json.dumps(
+                {'id': item.info['id'], 'title': item.info['title'], 'webpage_url': item.info['webpage_url'], 'duration': item.info['duration']}))
             if self.__clear:
                 self.__clear = False
                 self.queue.clear()
@@ -158,6 +170,13 @@ class MusicPlayer(Player):
             self.now_playing.source._buffer.seek(offset)
             return offset
         return -1
+
+    def __add_event(self, **kwargs):
+        for listener in self.listeners:
+            listener.put(ServerSentEvent(**kwargs))
+
+    def add_event(self, **kwargs):
+        gevent.spawn(self.__add_event, **kwargs)
 
 
 class MusicPlugin(Plugin):
@@ -479,3 +498,40 @@ class MusicPlugin(Plugin):
             seconds * player.now_playing.sampling_rate * player.now_playing.sample_size)
 
         return jsonify(action='seek', data={'frame': seconds})
+
+    @Plugin.route("/player/<int:guild>/events/")
+    def on_subscribe_events(self, guild):
+        from flask import Response
+
+        if guild not in self.guilds:
+            abort(400)
+
+        player = self.get_player(guild)
+
+        data = {}
+
+        data['paused'] = True if player.paused else False
+        data['queue'] = len(player.queue)
+        data['items'] = len(player.items)
+        data['curItem'] = None
+        if player.now_playing:
+            data['curItem'] = {
+                'id': player.now_playing.info['id'],
+                'duration': player.now_playing.info['duration'],
+                'fps': player.now_playing.sampling_rate * player.now_playing.sample_size / player.now_playing.frame_size,
+                'frame': player.tell_or_seek() / player.now_playing.frame_size
+            }
+
+        def gen():
+            queue = gevent.queue.Queue()
+            queue.put(ServerSentEvent(
+                event='handshake', data=json.dumps(data)))
+            player.listeners.append(queue)
+            try:
+                while True:
+                    result = queue.get()
+                    yield result.encode()
+            except GeneratorExit:
+                player.listeners.remove(queue)
+
+        return Response(gen(), mimetype="text/event-stream")
