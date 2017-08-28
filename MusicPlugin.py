@@ -413,91 +413,63 @@ class MusicPlugin(Plugin):
                     'fps': player.now_playing.sampling_rate * player.now_playing.sample_size / player.now_playing.frame_size,
                     'frame': player.tell_or_seek() / player.now_playing.frame_size
                 }
-        elif action == 'info':
-            if player.now_playing:
-                data['info'] = player.now_playing.info
         elif action == 'leave':
             player.disconnect()
             if guild in self.guilds:
                 del self.guilds[guild]
             flash('O player foi desconectado.', 'warning')
             return redirect(url_for('on_player_route'))
+        elif action == 'duck':
+            player.autovolume = True
+            data['autovolume'] = player.autovolume
+        elif action == 'autopause':
+            player.autopause = True
+            data['autopause'] = player.autopause
+        elif action == 'noduckorpause':
+            player.autopause = False
+            player.autovolume = False
+            data['autovolume'] = player.autovolume
+            data['autopause'] = player.autopause
 
         return jsonify(action=action, data=data)
 
-    @Plugin.route('/player/<int:guild>/<string:action>/<int:index>')
-    def on_player_action_route(self, guild, action, index):
+    @Plugin.route('/player/<int:guild>/<string:action>/<value>')
+    def on_player_action_route(self, guild, action, value):
 
         if guild not in self.guilds:
             abort(400)
 
         player = self.get_player(guild)
+        data = {}
 
         if action == 'remove':
+            index = int(value)
+            data['index'] = index
             item = player.queue.remove(index)
-            if item:
-                flash('"{}" foi removido da playlist.'.format(
-                    item.info['title']), 'info')
-            else:
-                flash('Algo deu errado. O índice {} não foi encontrado na playlist.'.format(
-                    index), 'warning')
         elif action == 'play':
+            index = int(value)
+            data['index'] = index
             item = player.queue.remove(index)
             if item:
                 player.queue.prepend(item)
                 if player.now_playing:
                     player.skip()
                 player.resume()
-                flash('"{}" está tocando agora.'.format(
-                    item.info['title']), 'success')
-            else:
-                flash('Algo deu errado. O índice {} não foi encontrado na playlist.'.format(
-                    index), 'warning')
+        elif action == 'vol':
+            volume = float(value)
+            player.volume = volume
+            data['volume'] = volume
+        elif action == 'dvol':
+            volume = float(value)
+            player.duckingvolume = volume
+            data['dvolume'] = volume
+        elif action == 'seek':
+            seconds = int(value)
+            player.tell_or_seek(
+                seconds * player.now_playing.sampling_rate * player.now_playing.sample_size)
+            data['seconds'] = seconds
 
-        return jsonify(action=action, data={'index': index})
-
-    @Plugin.route('/player/<int:guild>/vol/<volume>')
-    def on_player_volume_route(self, guild, volume):
-
-        if guild not in self.guilds:
-            abort(400)
-
-        self.get_player(guild).volume = float(volume)
-
-        return jsonify(action='volume', data={'volume': self.get_player(guild).volume})
-
-    @Plugin.route('/player/<int:guild>/opt', methods=['POST'])
-    def on_player_opt_route(self, guild):
-
-        if guild not in self.guilds:
-            abort(400)
-
-        player = self.get_player(guild)
-
-        option = request.form['options']
-
-        if option == 'duck':
-            player.autovolume = True
-            player.ducking_volume = float(request.form['duckVolume'])
-        elif option == 'pause':
-            player.autopause = True
-        elif option == 'none':
-            player.autovolume = player.autopause = False
-
-        return jsonify(action='opt', data={'option': option, 'autovolume': player.autovolume, 'autopause': player.autopause, 'duckvolume': player.ducking_volume})
-
-    @Plugin.route('/player/<int:guild>/seek/<int:seconds>')
-    def on_player_seek_route(self, guild, seconds):
-
-        if guild not in self.guilds:
-            abort(400)
-
-        player = self.get_player(guild)
-
-        player.tell_or_seek(
-            seconds * player.now_playing.sampling_rate * player.now_playing.sample_size)
-
-        return jsonify(action='seek', data={'frame': seconds})
+        return jsonify(action=action, data=data)
 
     @Plugin.route("/player/<int:guild>/events/")
     def on_subscribe_events(self, guild):

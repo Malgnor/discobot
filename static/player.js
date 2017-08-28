@@ -68,10 +68,10 @@ $(function () {
             return false;
         }));
 
-        $('form#opt > div.btn-group').on('change', formf('opt'));
-        $('input#duckVolumeControl').on('input', formf('opt', null, function (element) {
-            $(element).next().text(Math.round($(element).val() * 100) + '%');
-        }));
+        $('input#duckVolumeControl').on('input', function () {
+            $.ajax('dvol/' + $(this).val());            
+            $(this).next().text(Math.round($(this).val() * 100) + '%');
+        });
 
         $('.alert').on('closed.bs.alert', playlistf);
         $('[data-toggle="list"]').on('shown.bs.tab', playlistf);

@@ -79,29 +79,27 @@
                 </div>
               </li>
               <li class=list-group-item>
-                <form id=opt>
-                  <div class=btn-group data-toggle=buttons>
-                    <label class="btn btn-secondary {{ 'active' if not (player.autovolume or player.autopause) }}" data-toggle=list data-target=#notDuck role=tab>
-                      <input type=radio name=options id=option1 value=none autocomplete=off {{ 'checked' if not (player.autovolume or player.autopause) }}>Nenhum
-                    </label>
-                    <label class="btn btn-secondary {{ 'active' if player.autovolume }}" data-toggle=list data-target=#duckInput role=tab>
-                      <input type=radio name=options id=option2 value=duck autocomplete=off {{ 'checked' if player.autovolume }}>Atenuar
-                    </label>
-                    <label class="btn btn-secondary {{ 'active' if player.autopause }}" data-toggle=list data-target=#notDuck role=tab>
-                      <input type=radio name=options id=option3 value=pause autocomplete=off {{ 'checked' if player.autopause }}>Pausar
-                    </label>
-                  </div>
-                  <div class=tab-content>
-                    <div class="tab-pane fade {{ 'show active' if not player.autovolume }}" id=notDuck role=tabpanel></div>
-                    <div class="tab-pane fade {{ 'show active' if player.autovolume }}" id=duckInput role=tabpanel>
-                      <div class="input-group slider-group" style="margin-top: 0.25em;">
-                        <span class=slider-group-addon >🔉</span>
-                        <input class="form-control p-0" id=duckVolumeControl name=duckVolume type=range min=0 max=1 step=any value={{ player.ducking_volume }} >
-                        <span class=slider-group-addon style="min-width: 3em;">10%</span>                        
-                      </div>
+                <div class=btn-group data-toggle=buttons>
+                  <label data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='noduckorpause') }} class="btn btn-secondary {{ 'active' if not (player.autovolume or player.autopause) }}" data-toggle=list data-target=#notDuck role=tab>
+                    <input type=radio name=options id=option1 value=none autocomplete=off {{ 'checked' if not (player.autovolume or player.autopause) }}>Nenhum
+                  </label>
+                  <label data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='duck') }} class="btn btn-secondary {{ 'active' if player.autovolume }}" data-toggle=list data-target=#duckInput role=tab>
+                    <input type=radio name=options id=option2 value=duck autocomplete=off {{ 'checked' if player.autovolume }}>Atenuar
+                  </label>
+                  <label data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='autopause') }} class="btn btn-secondary {{ 'active' if player.autopause }}" data-toggle=list data-target=#notDuck role=tab>
+                    <input type=radio name=options id=option3 value=pause autocomplete=off {{ 'checked' if player.autopause }}>Pausar
+                  </label>
+                </div>
+                <div class=tab-content>
+                  <div class="tab-pane fade {{ 'show active' if not player.autovolume }}" id=notDuck role=tabpanel></div>
+                  <div class="tab-pane fade {{ 'show active' if player.autovolume }}" id=duckInput role=tabpanel>
+                    <div class="input-group slider-group" style="margin-top: 0.25em;">
+                      <span class=slider-group-addon >🔉</span>
+                      <input class="form-control p-0" id=duckVolumeControl name=duckVolume type=range min=0 max=1 step=any value={{ player.ducking_volume }} >
+                      <span class=slider-group-addon style="min-width: 3em;">10%</span>                        
                     </div>
                   </div>
-                </form>
+                </div>
               </li>
             </ul>
           </div>
@@ -126,16 +124,16 @@
             {% if link.info %}
             <tr {{ 'class=table-primary' if link.info['id'] == player.now_playing.info['id'] }}>
               <th class=text-center scope=row >{{ loop.index }}</th>
-              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}>▶️</a></td>
-              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}>❌</a></td>
+              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', value=loop.index0) }}>▶️</a></td>
+              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', value=loop.index0) }}>❌</a></td>
               <td class=text-center >{{ '%d:%02d'|format(link.info['duration']//60, link.info['duration']%60) }}</td>
               <td><a href={{ link.info['webpage_url'] }}>{{ link.info['title'] }}</a></td>
             </tr>
             {% else %}
             <tr>
               <th class=text-center scope=row >{{ loop.index }}</th>
-              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', index=loop.index0) }}>▶️</a></td>
-              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', index=loop.index0) }}>❌</a></td>
+              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', value=loop.index0) }}>▶️</a></td>
+              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', value=loop.index0) }}>❌</a></td>
               <td class=text-center ></td>
               <td></td>
             </tr>
