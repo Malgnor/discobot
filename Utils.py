@@ -13,10 +13,12 @@ class ServerSentEvent(object):
         self.data = kwargs.pop('data', None)
         self.event = kwargs.pop('event', None)
         self.id = kwargs.pop('id', None)
+        self.comment = kwargs.pop('comment', None)
         self.desc_map = {
-            self.data: "data",
+            self.comment: "",
+            self.id: "id",
             self.event: "event",
-            self.id: "id"
+            self.data: "data"
         }
 
     def encode(self):

@@ -52,7 +52,8 @@ class MusicPlayer(Player):
         self.items = PlayableQueue()
         self.listeners = []
 
-        gevent.spawn(self.add_items)
+        gevent.spawn(self.__add_items)
+        gevent.spawn(self.__keep_alive)
 
         self.events.on(self.Events.START_PLAY, self.on_start_play)
         self.events.on(self.Events.EMPTY_QUEUE,
@@ -146,7 +147,7 @@ class MusicPlayer(Player):
             else:
                 self.now_playing.volume = self.__base_volume
 
-    def add_items(self):
+    def __add_items(self):
         while True:
             item = self.items.get().pipe(UnbufferedOpusEncoderPlayable,
                                          library_path="C:/lib/libopus-0.x64.dll")
@@ -177,6 +178,29 @@ class MusicPlayer(Player):
 
     def add_event(self, **kwargs):
         gevent.spawn(self.__add_event, **kwargs)
+
+    def __keep_alive(self):
+        count = 0
+        while True:
+            gevent.sleep(1)
+            count += 1
+            if count == 5:
+                count = 0
+                data = {}
+                data['paused'] = True if self.paused else False
+                data['queue'] = len(self.queue)
+                data['items'] = len(self.items)
+                data['curItem'] = None
+                if self.now_playing:
+                    data['curItem'] = {
+                        'id': self.now_playing.info['id'],
+                        'duration': self.now_playing.info['duration'],
+                        'fps': self.now_playing.sampling_rate * self.now_playing.sample_size / self.now_playing.frame_size,
+                        'frame': self.tell_or_seek() / self.now_playing.frame_size
+                    }
+                self.add_event(event='stats', data=json.dumps(data))
+                continue
+            self.add_event(comment='keepalive')
 
 
 class MusicPlugin(Plugin):
@@ -401,22 +425,9 @@ class MusicPlugin(Plugin):
             if player.now_playing:
                 player.skip()
             player.resume()
-        elif action == 'status':
-            data['paused'] = True if player.paused else False
-            data['queue'] = len(player.queue)
-            data['items'] = len(player.items)
-            data['curItem'] = None
-            if player.now_playing:
-                data['curItem'] = {
-                    'id': player.now_playing.info['id'],
-                    'duration': player.now_playing.info['duration'],
-                    'fps': player.now_playing.sampling_rate * player.now_playing.sample_size / player.now_playing.frame_size,
-                    'frame': player.tell_or_seek() / player.now_playing.frame_size
-                }
         elif action == 'leave':
             player.disconnect()
-            if guild in self.guilds:
-                del self.guilds[guild]
+            del self.guilds[guild]
             flash('O player foi desconectado.', 'warning')
             return redirect(url_for('on_player_route'))
         elif action == 'duck':
@@ -430,6 +441,8 @@ class MusicPlugin(Plugin):
             player.autovolume = False
             data['autovolume'] = player.autovolume
             data['autopause'] = player.autopause
+        else:
+            abort(400)
 
         return jsonify(action=action, data=data)
 
@@ -461,13 +474,15 @@ class MusicPlugin(Plugin):
             data['volume'] = volume
         elif action == 'dvol':
             volume = float(value)
-            player.duckingvolume = volume
+            player.ducking_volume = volume
             data['dvolume'] = volume
         elif action == 'seek':
             seconds = int(value)
             player.tell_or_seek(
                 seconds * player.now_playing.sampling_rate * player.now_playing.sample_size)
             data['seconds'] = seconds
+        else:
+            abort(400)
 
         return jsonify(action=action, data=data)
 

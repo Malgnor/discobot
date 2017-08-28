@@ -9,7 +9,7 @@ String.prototype.toMMSS = function () {
 };
 
 $(function () {
-    var playlistCard, playerData = null, statusInterval, seekSlider, seekInterval, ignoreSeek = false,
+    var playlistCard, playerData = null, seekSlider, seekInterval, ignoreSeek = false,
         eventListener;
 
     var playlistf = function () {
@@ -105,6 +105,10 @@ $(function () {
     eventListener.onmessage = function (event) {
         console.debug(event);
     };
+    
+    eventListener.onerror = function (event) {
+        console.error(event);
+    };
 
     $(eventListener).on('handshake', eventf(function (data) {
         playerData = data;
@@ -134,6 +138,22 @@ $(function () {
             return false;
         });
         $('#playlistHeader').text('Playlist '+(idx+1)+'/'+(playerData.queue+playerData.items)+(playerData.items ? ' 🔄' : ''));
+    })).on('stats', eventf(function(data){
+        count = $('#tableList').children().length
+        if (playerData.paused != data.paused || count != data.queue ||
+            (playerData.curItem == null && data.curItem) || (playerData.curItem && data.curItem == null)) {
+            reloadpage();
+        } else if (playerData.curItem && data.curItem) {
+            if (playerData.curItem.id != data.curItem.id) {
+                reloadpage();
+            } else if(ignoreSeek){
+                ignoreSeek = false;
+            } else if (seekSlider && data.curItem.frame) {
+                seekSlider.val(Math.round(data.curItem.frame / data.curItem.fps));
+                updateSeekSlider();
+            }
+        }
+        playerData = data
     }));
 
     $(document).ajaxError(function (event, jqxhr, settings, thrownError) {
@@ -141,34 +161,9 @@ $(function () {
         if (!(jqxhr.status == 0 || jqxhr.status == 404)) reloadpage();
         else {
             clearInterval(seekInterval)
-            clearInterval(statusInterval);
+            eventListener.close()
         }
     });
-
-    statusInterval = setInterval(function () {
-        $.ajax({
-            url: 'status',
-            success: function (data) {
-                ddata = data.data
-                playerData = playerData || ddata
-                count = $('#tableList').children().length
-                if (playerData.paused != ddata.paused || count != ddata.queue ||
-                    (playerData.curItem == null && ddata.curItem) || (playerData.curItem && ddata.curItem == null)) {
-                    reloadpage();
-                } else if (playerData.curItem && ddata.curItem) {
-                    if (playerData.curItem.id != ddata.curItem.id) {
-                        reloadpage();
-                    } else if(ignoreSeek){
-                        ignoreSeek = false;
-                    } else if (seekSlider && ddata.curItem.frame) {
-                        seekSlider.val(Math.round(ddata.curItem.frame / ddata.curItem.fps));
-                        updateSeekSlider();
-                    }
-                }
-                playerData = ddata
-            }
-        });
-    }, 5000);
 
     seekInterval = setInterval(function () {
         if (seekSlider && playerData && playerData.curItem && !playerData.paused) {
