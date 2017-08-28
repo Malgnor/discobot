@@ -3,7 +3,8 @@
         "levels": {},
         "plugins": [
             "MusicPlugin",
-            "ManagerPlugin"
+            "ManagerPlugin",
+            "GAEPlugin"
         ],
         "plugin_config": {},
         "commands_enabled": true,
@@ -24,9 +25,9 @@
         "storage_fsync": true,
         "storage_serializer": "json",
         "storage_path": "storage.json",
-        "http_enabled": false,
+        "http_enabled": true,
         "http_host": "0.0.0.0",
-        "http_port": 7575,
+        "http_port": 8080,
         "http_root_path": "",
         "http_config": {
             "SECRET_KEY": "some random string",
@@ -41,7 +42,7 @@
     "token": "Your.Discord.token.here",
     "shard_id": 0,
     "shard_count": 1,
-    "max_reconnects": 5,
+    "max_reconnects": 0,
     "log_level": "info",
     "manhole_enable": null,
     "manhole_bind": [

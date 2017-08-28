@@ -288,7 +288,4 @@ class ManagerPlugin(Plugin):
             plugins.append(value)
 
         return render_template('plugins.html', plugins=plugins)
-
-    @Plugin.route('/_ah/health')
-    def on_health_check_route(self):
-        return 'Ok!'
+    
