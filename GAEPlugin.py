@@ -1,8 +1,13 @@
+import os
 from disco.bot import Plugin
 from flask import redirect
 
 
 class GAEPlugin(Plugin):
+    @Plugin.command('version', description='Mostra a versão atual do bot.')
+    def on_version_command(self, event):
+        event.msg.reply(os.getenv('GAE_VERSION', '????????'))
+
     @Plugin.route('/_ah/health')
     def on_health_check_route(self):
         return 'Ok!'
