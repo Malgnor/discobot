@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}MusicPlayer{{ ' - %s'|format(player.guild.name) if player }}{% endblock title %}
+{% block head %}
+<meta property=og:title content="{{ self.title() }}" />
+<meta property=og:type content=website />
+<meta property=og:site_name content=MusicPlayer />
+<meta property=og:description content="Controle o bot atrav&eacute;s da web."/>
+{{ super() }}
+<link rel=stylesheet href="{{ url_for('static', filename='player.css') }}">
+{% endblock %}
+{% block modalblock %}
+{% if player %}
+  <div class="modal fade" id=addModal tabindex=-1 role=dialog aria-labelledby=addModalLabel aria-hidden=true>
+    <div class=modal-dialog role=document>
+      <form id=add>
+        <div class=modal-content>
+          <div class=modal-header>
+            <h5 class=modal-title id=exampleModalLabel>Adicionar à playlist</h5>
+            <button type=button class=close data-dismiss=modal aria-label=Close>
+              <span aria-hidden=true>&times;</span>
+            </button>
+          </div>
+          <div class=modal-body>
+            <div class=input-group>
+              <input type=text class=form-control name=url placeholder=https://www.youtube.com/watch?v= required>            
+              <span class=input-group-addon>
+                <input type=checkbox name=playlist>Playlist
+              </span>
+            </div>
+          </div>
+          <div class=modal-footer>
+            <button type=button class="btn btn-secondary" data-dismiss=modal>Cancelar</button>
+            <button type=submit class="btn btn-primary">Adicionar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+{% block content %}
+<div id=content class=container>
+{% if player %}
+  <div class=card style="margin-top: 1em;">
+    <h4 class="card-header text-center">
+      {% if player.now_playing %}<a href={{ player.now_playing.info['webpage_url'] }}>{{ player.now_playing.info['title'] }}</a>{% endif %}
+      <a id=closeBtn class="btn btn-danger float-right" href={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='leave') }} >✖️</a>
+    </h4>
+    <div class="card-body p-0">
+      <div class=card-group>
+        <div class="border-bottom-0 border-left-0 border-top-0 card">
+          {% if player.now_playing %}
+            <div class="card-body p-0 text-center">
+              <a href={{ player.now_playing.info['webpage_url'] }}>
+                <img class="img-fluid img-thumbnail" src={{ player.now_playing.info['thumbnail'] }} alt="{{ player.now_playing.info['title'] }}" >
+              </a>
+            </div>
+            {% else %}
+            <div class="card-body text-center">
+              <p class="alert alert-info" role=alert>Playlist vazia.</p>
+            </div>
+            {% endif %}
+          </div>
+          <div class="border-0 card text-center">
+            <ul class="list-group list-group-flush">
+              <li class=list-group-item>
+                {% if player.paused %}
+                <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='resume') }} role=button>Resumir</a>
+                {% else %}
+                <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='pause') }} role=button>Pausar</a>
+                {% endif %}
+                <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='skip') }} role=button>Próximo</a>
+              </li>
+              <li class=list-group-item>
+                <div class="input-group slider-group">
+                  <span class=slider-group-addon >🔊</span>
+                  <input class="form-control p-0" id=volumeControl type=range min=0 max=1 step=any value={{ player.volume }} >
+                  <span class=slider-group-addon style="min-width: 3em;">10%</span>                        
+                </div>
+              </li>
+              <li class=list-group-item>
+                <div class=btn-group data-toggle=buttons>
+                  <label data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='noduckorpause') }} class="btn btn-secondary {{ 'active' if not (player.autovolume or player.autopause) }}" data-toggle=list data-target=#notDuck role=tab>
+                    <input type=radio name=options id=option1 value=none autocomplete=off {{ 'checked' if not (player.autovolume or player.autopause) }}>Nenhum
+                  </label>
+                  <label data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='duck') }} class="btn btn-secondary {{ 'active' if player.autovolume }}" data-toggle=list data-target=#duckInput role=tab>
+                    <input type=radio name=options id=option2 value=duck autocomplete=off {{ 'checked' if player.autovolume }}>Atenuar
+                  </label>
+                  <label data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='autopause') }} class="btn btn-secondary {{ 'active' if player.autopause }}" data-toggle=list data-target=#notDuck role=tab>
+                    <input type=radio name=options id=option3 value=pause autocomplete=off {{ 'checked' if player.autopause }}>Pausar
+                  </label>
+                </div>
+                <div class=tab-content>
+                  <div class="tab-pane fade {{ 'show active' if not player.autovolume }}" id=notDuck role=tabpanel></div>
+                  <div class="tab-pane fade {{ 'show active' if player.autovolume }}" id=duckInput role=tabpanel>
+                    <div class="input-group slider-group" style="margin-top: 0.25em;">
+                      <span class=slider-group-addon >🔉</span>
+                      <input class="form-control p-0" id=duckVolumeControl name=duckVolume type=range min=0 max=1 step=any value={{ player.ducking_volume }} >
+                      <span class=slider-group-addon style="min-width: 3em;">10%</span>                        
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      {% if player.now_playing %}
+      <div class="card-footer p-0">
+        <div class=input-group>
+          <input class="form-control p-0" id=seekControl type=range min=0 max={{ player.now_playing.info['duration'] }} step=1 value={{ player.tell_or_seek() // (player.now_playing.sampling_rate * player.now_playing.sample_size) }} >
+          <span class=text-center style="border-left: 1px solid #dfdfdf; min-width: 6em" data-isseek>00:00</span>
+        </div>
+      </div>
+      {% endif %}
+  </div>
+  <div class=card style="min-height: 20em; margin-top: 1em;">
+    <h4 id=playlistHeader class="card-header text-center">Playlist {{ '%d/%d%s'|format(player.queue|count, player.items|count+player.queue|count, ' 🔄' if player.items|count else '') }}</h4>
+    {% if player.queue %}
+    <div class="card-body p-0" style="overflow-y: auto">
+      <table id=tableList class="table table-sm table-hover m-0">
+      </table>
+    </div>
+    {% else %}
+    <div class="card-body text-center">
+      <p class="alert alert-info" role=alert>Playlist vazia.</p>
+    </div>
+    {% endif %}
+    <div class="card-footer text-center">
+      <button type=button class="btn btn-primary" data-toggle=modal data-target=#addModal>Adicionar</button>
+      <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='shuffle') }} role=button>Shuffle</a>
+      <a class="btn btn-primary" href=# data-ajaxurl={{ url_for('on_player_queue_action_route', guild=player.guild.id, action='clear') }} role=button>Limpar</a>
+    </div>
+  </div>
+{% else %}
+  <p class="text-center alert alert-warning" role=alert>Player n&atilde;o encontrado!</p>
+{% endif %}
+</div>
+{% endblock content %}
+{% block scripts %}
+{% if player %}
+  <script crossorigin src="https://unpkg.com/react@15/dist/react.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
+  <script src="{{ url_for('static', filename='player_with_react.js') }}?v=0"></script>
+{% endif %}
+{% endblock %}

@@ -326,6 +326,9 @@ class MusicPlugin(Plugin):
     def on_player_route(self, guild=0):
         from flask import render_template
 
+        if 'react' in request.args:
+            return render_template('player_with_react.html', player=self.guilds.get(guild))
+
         try:
             channelid = int(request.args.get('channel', 0))
         except ValueError as exception:
@@ -501,6 +504,7 @@ class MusicPlugin(Plugin):
         data['paused'] = True if player.paused else False
         data['queue'] = len(player.queue)
         data['items'] = len(player.items)
+        data['playlist'] = [{'id':value.info['id'], 'title':value.info['title'], 'duration':value.info['duration'], 'webpage_url':value.info['webpage_url']} for value in player.queue]
         data['curItem'] = None
         if player.now_playing:
             data['curItem'] = {
