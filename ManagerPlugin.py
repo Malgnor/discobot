@@ -20,7 +20,7 @@ class ManagerPlugin(Plugin):
             save_bot_config(self.bot, path)
             event.msg.reply(
                 'Configurações do bot/client salvas em {}.'.format(path))
-        except Exception as exception:
+        except Exception as exception: # pylint: disable=W0703
             event.msg.reply('Erro: {}.'.format(exception))
 
     @Plugin.command('config reload', '[path:str...]', group='bot', description='Recarrega as configurações do bot/client.', hide=True)
@@ -30,7 +30,7 @@ class ManagerPlugin(Plugin):
                 event.msg.reply('Configurações do bot/client recarregadas.')
             else:
                 event.msg.reply('Arquivo {} inexistente.'.format(path))
-        except Exception as exception:
+        except Exception as exception: # pylint: disable=W0703
             event.msg.reply('Erro: {}.'.format(exception))
 
     @Plugin.command('config edit', '<plugin:str> <key:str> <value:str...>', group='plugin', description='Altera uma configuração do plugin', hide=True)
@@ -94,7 +94,7 @@ class ManagerPlugin(Plugin):
         self.client.api.channels_typing(event.msg.channel_id)
         try:
             self.bot.add_plugin_module(plugin)
-        except Exception as exception:
+        except Exception as exception: # pylint: disable=W0703
             event.msg.reply(
                 'Erro ao tentar adicionar plugin {}: {}.'.format(plugin, exception))
             return

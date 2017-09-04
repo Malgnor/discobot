@@ -1,5 +1,5 @@
 String.prototype.toMMSS = function () {
-    var seconds = parseInt(this);
+    var seconds = parseInt(this, 10);
     var minutes = Math.floor(seconds / 60);
     seconds -= minutes * 60;
 
@@ -8,9 +8,48 @@ String.prototype.toMMSS = function () {
     return minutes + ':' + seconds;
 };
 
+String.prototype.createReactElement = function (props, ...children){
+    return React.createElement(this.toString(), props, ...children);
+};
+
+function PLItem(props) {
+    return (
+        'tr'.createReactElement(null,
+            'th'.createReactElement({className:'text-center', scope:'row'}, props.index+1),
+            'td'.createReactElement({className:'text-center'}, 
+                'a'.createReactElement({href:'#', onClick:(e)=>props.onClick(e, 'play/'+props.index)}, '▶️')),
+            'td'.createReactElement({className:'text-center'},
+                'a'.createReactElement({href:'#', onClick:(e)=>props.onClick(e, 'remove/'+props.index)}, '❌')),
+            'td'.createReactElement({className:'text-center'}, (props.item.duration+'').toMMSS()),
+            'td'.createReactElement(null, 
+                'a'.createReactElement({href:props.item.webpage_url}, props.item.title))
+        )
+    );
+};
+
+class PList extends React.Component {
+    constructor(props){
+        super(props);
+        this.state = {playlist: props.playlist};
+        this.handleClick = this.handleClick.bind(this);
+    }
+
+    handleClick(event, url){
+        $.ajax({url: url});
+        event.preventDefault();
+    }
+
+    render() {
+        const items = this.state.playlist.map((item, index) => React.createElement(PLItem, {item: item, index: index, key:item.id, onClick: this.handleClick}));
+        return (
+            'tbody'.createReactElement(null, items)
+        );
+    }
+};
+
 $(function () {
     var playlistCard, playerData = null, seekSlider, seekInterval, ignoreSeek = false,
-        eventListener;
+        eventListener, PL;
 
     var playlistf = function () {
         playlistCard.outerHeight($(window).height() - playlistCard.offset().top - 2);
@@ -38,7 +77,7 @@ $(function () {
     }
 
     var reloadpage = function (data) {
-        $('body').load(' #mainDiv', onreloadpage);
+        //$('body').load(' #mainDiv', onreloadpage);
     };
 
     var updateSeekSlider = function (slider) {
@@ -112,6 +151,7 @@ $(function () {
 
     $(eventListener).on('handshake', eventf(function (data) {
         playerData = data;
+        ReactDOM.render(React.createElement(PList, {playlist:playerData.playlist}), document.getElementById('tableList'));
     })).on('firstframe', eventf(function (data) {
         seekSlider.val(0);
         updateSeekSlider();
@@ -123,24 +163,10 @@ $(function () {
             $('#duckVolumeControl').val(parseFloat(data.dvol)).next().text(Math.round(data.dvol * 100) + '%');
         }
     })).on('playlistadd', eventf(function (data) {
-        idx = $('#tableList').children().length
-        $('<tr>\
-        <th class="text-center" scope="row">'+ (idx + 1) + '</th>\
-        <td class="text-center"><a href="#" data-ajaxurl="play/'+ idx + '">▶️</a></td>\
-        <td class="text-center"><a href="#" data-ajaxurl="remove/'+ idx + '">❌</a></td>\
-        <td class="text-center">'+ (data.duration + '').toMMSS() + '</td>\
-        <td><a href="'+ data.webpage_url + '">' + data.title + '</a></td>\
-        </tr>').appendTo('#tableList').on('click', '[data-ajaxurl]', function () {
-            $.ajax({
-                url: $(this).data('ajaxurl'),
-                success: reloadpage
-            });
-            return false;
-        });
-        $('#playlistHeader').text('Playlist '+(idx+1)+'/'+(playerData.queue+playerData.items)+(playerData.items ? ' 🔄' : ''));
+        playerData.playlist.push(data);
+        ReactDOM.render(React.createElement(PList, {playlist:playerData.playlist}), document.getElementById('tableList'));
     })).on('stats', eventf(function(data){
-        count = $('#tableList').children().length
-        if (playerData.paused != data.paused || count != data.queue ||
+        if (playerData.paused != data.paused ||
             (playerData.curItem == null && data.curItem) || (playerData.curItem && data.curItem == null)) {
             reloadpage();
         } else if (playerData.curItem && data.curItem) {
@@ -153,7 +179,9 @@ $(function () {
                 updateSeekSlider();
             }
         }
+        pl = playerData.playlist
         playerData = data
+        playerData.playlist = pl
     }));
 
     $(document).ajaxError(function (event, jqxhr, settings, thrownError) {
@@ -167,7 +195,7 @@ $(function () {
 
     seekInterval = setInterval(function () {
         if (seekSlider && playerData && playerData.curItem && !playerData.paused) {
-            seekSlider.val(parseInt(seekSlider.val()) + 1);
+            seekSlider.val(parseInt(seekSlider.val(), 10) + 1);
             updateSeekSlider();
         }
     }, 1000);

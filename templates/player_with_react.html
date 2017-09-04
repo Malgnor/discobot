@@ -118,28 +118,7 @@
     <h4 id=playlistHeader class="card-header text-center">Playlist {{ '%d/%d%s'|format(player.queue|count, player.items|count+player.queue|count, ' 🔄' if player.items|count else '') }}</h4>
     {% if player.queue %}
     <div class="card-body p-0" style="overflow-y: auto">
-      <table class="table table-sm table-hover m-0">
-        <tbody id=tableList >
-          {% for link in player.queue %}
-            {% if link.info %}
-            <tr {{ 'class=table-primary' if link.info['id'] == player.now_playing.info['id'] }}>
-              <th class=text-center scope=row >{{ loop.index }}</th>
-              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', value=loop.index0) }}>▶️</a></td>
-              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', value=loop.index0) }}>❌</a></td>
-              <td class=text-center >{{ '%02d:%02d'|format(link.info['duration']//60, link.info['duration']%60) }}</td>
-              <td><a href={{ link.info['webpage_url'] }}>{{ link.info['title'] }}</a></td>
-            </tr>
-            {% else %}
-            <tr>
-              <th class=text-center scope=row >{{ loop.index }}</th>
-              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', value=loop.index0) }}>▶️</a></td>
-              <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', value=loop.index0) }}>❌</a></td>
-              <td class=text-center ></td>
-              <td></td>
-            </tr>
-            {% endif %}
-          {% endfor %}
-        </tbody>
+      <table id=tableList class="table table-sm table-hover m-0">
       </table>
     </div>
     {% else %}
@@ -160,6 +139,8 @@
 {% endblock content %}
 {% block scripts %}
 {% if player %}
-  <script src="{{ url_for('static', filename='player.js') }}?v=5"></script>
+  <script crossorigin src="https://unpkg.com/react@15/dist/react.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
+  <script src="{{ url_for('static', filename='player_with_react.js') }}?v=0"></script>
 {% endif %}
 {% endblock %}
