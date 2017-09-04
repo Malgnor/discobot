@@ -149,11 +149,12 @@ class MusicPlayer(Player):
     def __add_items(self):
         while True:
             try:
-                item = self.items.get().pipe(UnbufferedOpusEncoderPlayable)
-                self.queue.append(item)
-                self.add_event(event='playlistadd', data=json.dumps(
-                    {'id': item.info['id'], 'title': item.info['title'], 'webpage_url': item.info['webpage_url'], 'duration': item.info['duration']}))
-            except Exception: # pylint: disable=W0703
+                item = self.items.get().pipe(UnbufferedOpusEncoderPlayable)                
+                if item.info:
+                    self.queue.append(item)
+                    self.add_event(event='playlistadd', data=json.dumps(
+                        {'id': item.info['id'], 'title': item.info['title'], 'webpage_url': item.info['webpage_url'], 'duration': item.info['duration']}))
+            except Exception:  # pylint: disable=W0703
                 pass
             if self.__clear:
                 self.__clear = False
@@ -260,7 +261,8 @@ class MusicPlugin(Plugin):
 
     @Plugin.command('play', '<url:str>', description='Adiciona um item na playlist.')
     def on_play(self, event, url):
-        self.get_player(event.guild.id).items.append(YoutubeDLInput(remove_angular_brackets(url)))
+        self.get_player(event.guild.id).items.append(
+            YoutubeDLInput(remove_angular_brackets(url)))
 
     @Plugin.command('playlist', '<url:str>', description='Adiciona vários items na playlist.')
     def on_playlist(self, event, url):
@@ -502,7 +504,8 @@ class MusicPlugin(Plugin):
         data['paused'] = True if player.paused else False
         data['queue'] = len(player.queue)
         data['items'] = len(player.items)
-        data['playlist'] = [{'id':value.info['id'], 'title':value.info['title'], 'duration':value.info['duration'], 'webpage_url':value.info['webpage_url']} for value in player.queue]
+        data['playlist'] = [{'id': value.info['id'], 'title':value.info['title'],
+                             'duration':value.info['duration'], 'webpage_url':value.info['webpage_url']} for value in player.queue]
         data['curItem'] = None
         if player.now_playing:
             data['curItem'] = {
