@@ -126,7 +126,7 @@
               <th class=text-center scope=row >{{ loop.index }}</th>
               <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='play', value=loop.index0) }}>▶️</a></td>
               <td class=text-center ><a href=# data-ajaxurl={{ url_for('on_player_action_route', guild=player.guild.id, action='remove', value=loop.index0) }}>❌</a></td>
-              <td class=text-center >{{ '%d:%02d'|format(link.info['duration']//60, link.info['duration']%60) }}</td>
+              <td class=text-center >{{ '%02d:%02d'|format(link.info['duration']//60, link.info['duration']%60) }}</td>
               <td><a href={{ link.info['webpage_url'] }}>{{ link.info['title'] }}</a></td>
             </tr>
             {% else %}

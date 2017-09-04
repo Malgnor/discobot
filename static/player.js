@@ -43,7 +43,7 @@ $(function () {
 
     var updateSeekSlider = function (slider) {
         slider = slider || seekSlider
-        slider.next().text(slider.val().toMMSS() + '/' + slider.attr('max').toMMSS());
+        if (slider) slider.next().text(slider.val().toMMSS() + '/' + slider.attr('max').toMMSS());
     };
 
     onreloadpage = function () {

@@ -149,11 +149,14 @@ class MusicPlayer(Player):
 
     def __add_items(self):
         while True:
-            item = self.items.get().pipe(UnbufferedOpusEncoderPlayable,
-                                         library_path="C:/lib/libopus-0.x64.dll")
-            self.queue.append(item)
-            self.add_event(event='playlistadd', data=json.dumps(
-                {'id': item.info['id'], 'title': item.info['title'], 'webpage_url': item.info['webpage_url'], 'duration': item.info['duration']}))
+            try:
+                item = self.items.get().pipe(UnbufferedOpusEncoderPlayable,
+                                             library_path="C:/lib/libopus-0.x64.dll")
+                self.queue.append(item)
+                self.add_event(event='playlistadd', data=json.dumps(
+                    {'id': item.info['id'], 'title': item.info['title'], 'webpage_url': item.info['webpage_url'], 'duration': item.info['duration']}))
+            except Exception: # pylint: disable=W0703
+                pass
             if self.__clear:
                 self.__clear = False
                 self.queue.clear()
@@ -259,8 +262,7 @@ class MusicPlugin(Plugin):
 
     @Plugin.command('play', '<url:str>', description='Adiciona um item na playlist.')
     def on_play(self, event, url):
-        self.get_player(event.guild.id).queue.append(YoutubeDLInput(remove_angular_brackets(
-            url)).pipe(UnbufferedOpusEncoderPlayable, library_path="C:/lib/libopus-0.x64.dll"))
+        self.get_player(event.guild.id).items.append(YoutubeDLInput(remove_angular_brackets(url)))
 
     @Plugin.command('playlist', '<url:str>', description='Adiciona vários items na playlist.')
     def on_playlist(self, event, url):
@@ -348,7 +350,7 @@ class MusicPlugin(Plugin):
             else:
                 return jsonify(error='Canal precisa ser um canal do tipo voz e pertencer a uma guild.\nCanal: {}\nGuild: {}\nVoz: {}'.format(channel, channel.is_guild, channel.is_voice))
 
-        return render_template('player.html', player=self.guilds[guild] if guild in self.guilds else None)
+        return render_template('player.html', player=self.guilds.get(guild))
 
     @Plugin.route('/player/join/')
     def on_player_join_route(self):
@@ -393,8 +395,7 @@ class MusicPlugin(Plugin):
         else:
             item = YoutubeDLInput(url)
 
-            self.get_player(guild).queue.append(
-                item.pipe(UnbufferedOpusEncoderPlayable, library_path="C:/lib/libopus-0.x64.dll"))
+            self.get_player(guild).items.append(item)
             flash('"{}" foi adicionado na playlist.'.format(
                 item.info['title']), 'success')
 
