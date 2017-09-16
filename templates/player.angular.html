@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}MusicPlayer{% endblock title %}
+{% block head %}
+<meta property=og:title content="{{ self.title() }}" />
+<meta property=og:type content=website />
+<meta property=og:site_name content=MusicPlayer />
+<meta property=og:description content="Controle o bot atrav&eacute;s da web."/>
+{{ super() }}
+<link rel=stylesheet href="{{ url_for('static', filename='player.css') }}">
+
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.5/angular.min.js" crossorigin=anonymous></script>
+{% endblock %}
+{% block content %}
+{% raw %}
+<div id=content class=container ng-app="playerApp">
+<div class="modal fade" id=addModal tabindex=-1 role=dialog aria-labelledby=addModalLabel aria-hidden=true ng-controller="AddController">
+  <div class=modal-dialog role=document>
+    <form id=add>
+      <div class=modal-content>
+        <div class=modal-header>
+          <h5 class=modal-title id=exampleModalLabel>Adicionar à playlist</h5>
+          <button type=button class=close data-dismiss=modal aria-label=Close>
+            <span aria-hidden=true>&times;</span>
+          </button>
+        </div>
+        <div class=modal-body>
+          <div class=input-group>
+            <input type=text class=form-control name=url ng-model="url" placeholder=https://www.youtube.com/watch?v= required>
+            <span class=input-group-addon>
+              <input type=checkbox name=playlist ng-model="playlist">Playlist
+            </span>
+          </div>
+        </div>
+        <div class=modal-footer>
+          <button type=button class="btn btn-secondary" data-dismiss=modal>Cancelar</button>
+          <button type=submit class="btn btn-primary" data-dismiss=modal ng-click="addUrl()">Adicionar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+<div ng-controller="PlayerController">
+  <div class=card style="margin-top: 1em;">
+    <h4 class="card-header text-center">
+      <a ng-href="{{ player.curItem.webpageUrl }}" ng-bind="player.curItem.title"></a>
+      <a id=closeBtn class="btn btn-danger float-right" href=leave >✖️</a>
+    </h4>
+    <div class="card-body p-0">
+      <div class=card-group>
+        <div class="border-bottom-0 border-left-0 border-top-0 card">
+          <div class="card-body p-0 text-center">
+            <a ng-href="{{ player.curItem.webpageUrl }}">
+              <img class="img-fluid img-thumbnail" ng-if="player.curItem" ng-src="{{ player.curItem.thumbnail }}" alt="{{ player.curItem.title }}" >
+            </a>
+          </div>
+        </div>
+        <div class="border-0 card text-center">
+          <ul class="list-group list-group-flush">
+            <li class=list-group-item>
+              <button class="btn btn-primary" href=# ng-click="ajaxAction('resume')" ng-disabled="!player.paused" role=button>Resumir</button>
+              <button class="btn btn-primary" href=# ng-click="ajaxAction('pause')" ng-disabled="player.paused" role=button>Pausar</button>
+              <button class="btn btn-primary" href=# ng-click="ajaxAction('skip')" ng-disabled="!player.curItem" role=button>Próximo</button>
+            </li>
+            <li class=list-group-item>
+              <div class="input-group slider-group">
+                <span class=slider-group-addon >🔊</span>
+                <input class="form-control p-0" id=volumeControl type=range min=0 max=1 step=any ng-model="player.volume" ng-change="ajaxAction('vol', player.volume, true)">
+                <span class=slider-group-addon style="min-width: 3em;" ng-bind="player.volume | pct"></span>
+              </div>
+            </li>
+            <li class=list-group-item>
+              <div class=btn-group data-toggle=buttons>
+                <label ng-click="ajaxAction('noduckorpause')" class="btn btn-secondary" ng-class="{active: !(player.autovolume || player.autopause)}" data-toggle=list data-target=#notDuck role=tab>
+                  <input type=radio name=options id=option1 value=none autocomplete=off ng-checked="!(player.autovolume || player.autopause)">Nenhum
+                </label>
+                <label ng-click="ajaxAction('duck')" class="btn btn-secondary" ng-class="{active: player.autovolume}" data-toggle=list data-target=#duckInput role=tab>
+                  <input type=radio name=options id=option2 value=duck autocomplete=off ng-checked="player.autovolume">Atenuar
+                </label>
+                <label ng-click="ajaxAction('autopause')" class="btn btn-secondary" ng-class="{active: player.autopause}" data-toggle=list data-target=#notDuck role=tab>
+                  <input type=radio name=options id=option3 value=pause autocomplete=off ng-checked="player.autopause">Pausar
+                </label>
+              </div>
+              <div class=tab-content>
+                <div class="tab-pane fade" ng-class="{show: !player.autovolume, active: !player.autovolume}" id=notDuck role=tabpanel></div>
+                <div class="tab-pane fade" ng-class="{show: player.autovolume, active: player.autovolume}" id=duckInput role=tabpanel>
+                  <div class="input-group slider-group" style="margin-top: 0.25em;">
+                    <span class=slider-group-addon >🔉</span>
+                    <input class="form-control p-0" id=duckVolumeControl name=duckVolume type=range min=0 max=1 step=any ng-model="player.duckingVolume" ng-change="ajaxAction('dvol', player.duckingVolume, true)">
+                    <span class=slider-group-addon style="min-width: 3em;" ng-bind="player.duckingVolume | pct"></span>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer p-0">
+      <div class=input-group>
+        <input class="form-control p-0" id=seekControl type=range min=0 max="{{ player.curItem.duration * player.curItem.fps }}" step=1 ng-model="player.frames" value="0" ng-disabled="!player.curItem">
+        <span class=text-center style="border-left: 1px solid #dfdfdf; min-width: 6em" ng-bind="(player.curItem ? (player.frames/player.curItem.fps*1000):0) | date:'mm:ss'"></span>
+      </div>
+    </div>
+  </div>
+  <div class=card style="min-height: 20em; margin-top: 1em;">
+    <h4 id=playlistHeader class="card-header text-center">Playlist <span ng-bind="player.queue+'/'+(player.queue+player.items)+(player.items ? ' 🔄' : '')"></span></h4>
+    <div class="card-body p-0" style="overflow-y: auto">
+      <table class="table table-sm table-hover m-0">
+        <tbody id=tableList >
+            <tr ng-repeat="link in player.playlist" ng-class="{'table-primary': link.id === player.curItem.id}">
+              <th class=text-center scope=row ng-bind="$index+1"></th>
+              <td class=text-center ><a href=# ng-click="ajaxAction('play', $index)">▶️</a></td>
+              <td class=text-center ><a href=# ng-click="ajaxAction('remove', $index)">❌</a></td>
+              <td class=text-center ng-bind="(link.duration*1000) | date:'mm:ss'"></td>
+              <td><a ng-href="{{ link.webpageUrl }}" ng-bind="link.title"></a></td>
+            </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer text-center">
+      <button type=button class="btn btn-primary" data-toggle=modal data-target=#addModal>Adicionar</button>
+      <button class="btn btn-primary" href=# ng-click="ajaxAction('shuffle')" ng-disabled="!player.queue" role=button>Shuffle</button>
+      <button class="btn btn-primary" href=# ng-click="ajaxAction('clear')" ng-disabled="!player.queue" role=button>Limpar</button>
+    </div>
+  </div>
+</div>
+</div>
+{% endraw %}
+{% endblock content %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='player.angular.js') }}"></script>
+{% endblock %}
