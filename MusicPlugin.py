@@ -153,7 +153,8 @@ class MusicPlayer(Player):
                 if item.info:
                     self.queue.append(item)
                     self.add_event(event='playlistadd', data=json.dumps(
-                        {'id': item.info['id'], 'title': item.info['title'], 'webpage_url': item.info['webpage_url'], 'duration': item.info['duration']}))
+                        {'id': item.info['id'], 'duration': item.info['duration'], 'webpageUrl': item.info['webpage_url'], 'title': item.info['title'],
+                         'thumbnail': item.info['thumbnail'], 'fps': item.sampling_rate * item.sample_size / item.frame_size, 'frame': 0}))
             except Exception:  # pylint: disable=W0703
                 pass
             if self.__clear:
@@ -190,6 +191,10 @@ class MusicPlayer(Player):
                 count = 0
                 data = {}
                 data['paused'] = True if self.paused else False
+                data['volume'] = self.volume
+                data['duckingVolume'] = self.ducking_volume
+                data['autopause'] = self.autopause
+                data['autovolume'] = self.autovolume
                 data['queue'] = len(self.queue)
                 data['items'] = len(self.items)
                 data['curItem'] = None
@@ -197,6 +202,9 @@ class MusicPlayer(Player):
                     data['curItem'] = {
                         'id': self.now_playing.info['id'],
                         'duration': self.now_playing.info['duration'],
+                        'webpageUrl': self.now_playing.info['webpage_url'],
+                        'title': self.now_playing.info['title'],
+                        'thumbnail': self.now_playing.info['thumbnail'],
                         'fps': self.now_playing.sampling_rate * self.now_playing.sample_size / self.now_playing.frame_size,
                         'frame': self.tell_or_seek() / self.now_playing.frame_size
                     }
@@ -326,8 +334,8 @@ class MusicPlugin(Plugin):
     def on_player_route(self, guild=0):
         from flask import render_template
 
-        if 'react' in request.args:
-            return render_template('player_with_react.html', player=self.guilds.get(guild))
+        if 'angular' in request.args:
+            return render_template('player.angular.html')
 
         try:
             channelid = int(request.args.get('channel', 0))
@@ -481,10 +489,11 @@ class MusicPlugin(Plugin):
             player.ducking_volume = volume
             data['dvolume'] = volume
         elif action == 'seek':
-            seconds = int(value)
-            player.tell_or_seek(
-                seconds * player.now_playing.sampling_rate * player.now_playing.sample_size)
-            data['seconds'] = seconds
+            if player.now_playing:
+                seconds = int(value)
+                player.tell_or_seek(
+                    seconds * player.now_playing.sampling_rate * player.now_playing.sample_size)
+                data['seconds'] = seconds
         else:
             abort(400)
 
@@ -502,15 +511,22 @@ class MusicPlugin(Plugin):
         data = {}
 
         data['paused'] = True if player.paused else False
+        data['volume'] = player.volume
+        data['duckingVolume'] = player.ducking_volume
+        data['autopause'] = player.autopause
+        data['autovolume'] = player.autovolume
         data['queue'] = len(player.queue)
         data['items'] = len(player.items)
         data['playlist'] = [{'id': value.info['id'], 'title':value.info['title'],
-                             'duration':value.info['duration'], 'webpage_url':value.info['webpage_url']} for value in player.queue]
+                             'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in player.queue]
         data['curItem'] = None
         if player.now_playing:
             data['curItem'] = {
                 'id': player.now_playing.info['id'],
                 'duration': player.now_playing.info['duration'],
+                'webpageUrl': player.now_playing.info['webpage_url'],
+                'title': player.now_playing.info['title'],
+                'thumbnail': player.now_playing.info['thumbnail'],
                 'fps': player.now_playing.sampling_rate * player.now_playing.sample_size / player.now_playing.frame_size,
                 'frame': player.tell_or_seek() / player.now_playing.frame_size
             }
