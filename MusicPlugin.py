@@ -8,7 +8,7 @@ from disco.voice.packets import VoiceOPCode
 from disco.voice.playable import UnbufferedOpusEncoderPlayable, YoutubeDLInput
 from disco.voice.player import Player
 from disco.voice.queue import PlayableQueue
-from flask import abort, flash, jsonify, redirect, request, url_for
+from flask import abort, jsonify, redirect, request, url_for
 
 from Utils import ServerSentEvent, remove_angular_brackets
 
@@ -398,21 +398,24 @@ class MusicPlugin(Plugin):
             abort(400)
 
         url = request.form['url']
+        message = {}
 
         if 'playlist' in request.form:
             items = list(YoutubeDLInput.many(url))
             for item in items:
                 self.get_player(guild).items.append(item)
-            flash('{} foram adicionados na playlist.'.format(
-                len(items)), 'success')
+            message['message'] = '{} foram adicionados na playlist.'.format(
+                len(items))
+            message['type'] = 'success'
         else:
             item = YoutubeDLInput(url)
 
             self.get_player(guild).items.append(item)
-            flash('"{}" foi adicionado na playlist.'.format(
-                item.info['title']), 'success')
+            message['message'] = '"{}" foi adicionado na playlist.'.format(
+                item.info['title'])
+            message['type'] = 'success'
 
-        return jsonify(action='add', data={'url': url})
+        return jsonify(action='add', data={'url': url}, message=message)
 
     @Plugin.route('/player/<int:guild>/<string:action>')
     def on_player_queue_action_route(self, guild, action):
@@ -422,19 +425,24 @@ class MusicPlugin(Plugin):
 
         player = self.get_player(guild)
         data = {}
+        message = {}
 
         if action == 'shuffle':
             player.queue.shuffle()
-            flash('Playlist foi embaralhada.', 'info')
+            message['message'] = 'Playlist foi embaralhada.'
+            message['type'] = 'info'
         elif action == 'clear':
             player.clear()
-            flash('Playlist foi esvaziada.', 'info')
+            message['message'] = 'Playlist foi esvaziada.'
+            message['type'] = 'info'
         elif action == 'play' or action == 'resume':
             player.resume()
-            flash('O player foi despausado.', 'info')
+            message['message'] = 'O player foi despausado.'
+            message['type'] = 'info'
         elif action == 'pause':
             player.pause()
-            flash('O player foi pausado.', 'info')
+            message['message'] = 'O player foi pausado.'
+            message['type'] = 'info'
         elif action == 'skip':
             if player.now_playing:
                 player.skip()
@@ -442,7 +450,8 @@ class MusicPlugin(Plugin):
         elif action == 'leave':
             player.disconnect()
             del self.guilds[guild]
-            flash('O player foi desconectado.', 'warning')
+            message['message'] = 'O player foi desconectado.'
+            message['type'] = 'warning'
             return redirect(url_for('on_player_route'))
         elif action == 'duck':
             player.autovolume = True
@@ -458,7 +467,7 @@ class MusicPlugin(Plugin):
         else:
             abort(400)
 
-        return jsonify(action=action, data=data)
+        return jsonify(action=action, data=data, message={})
 
     @Plugin.route('/player/<int:guild>/<string:action>/<value>')
     def on_player_action_route(self, guild, action, value):
