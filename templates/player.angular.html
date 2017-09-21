@@ -13,37 +13,43 @@
 {% block content %}
 {% raw %}
 <div id=content class=container ng-app="playerApp">
-<div class="modal fade" id=addModal tabindex=-1 role=dialog aria-labelledby=addModalLabel aria-hidden=true ng-controller="AddController">
-  <div class=modal-dialog role=document>
-    <form id=add>
-      <div class=modal-content>
-        <div class=modal-header>
-          <h5 class=modal-title id=exampleModalLabel>Adicionar à playlist</h5>
-          <button type=button class=close data-dismiss=modal aria-label=Close>
-            <span aria-hidden=true>&times;</span>
-          </button>
-        </div>
-        <div class=modal-body>
-          <div class=input-group>
-            <input type=text class=form-control name=url ng-model="url" placeholder=https://www.youtube.com/watch?v= required>
-            <span class=input-group-addon>
-              <input type=checkbox name=playlist ng-model="playlist">Playlist
-            </span>
+<div ng-controller="PlayerController">
+  <div class="modal fade" id=addModal tabindex=-1 role=dialog aria-labelledby=addModalLabel aria-hidden=true ng-controller="AddController">
+    <div class=modal-dialog role=document>
+      <form id=add>
+        <div class=modal-content>
+          <div class=modal-header>
+            <h5 class=modal-title id=exampleModalLabel>Adicionar à playlist</h5>
+            <button type=button class=close data-dismiss=modal aria-label=Close>
+              <span aria-hidden=true>&times;</span>
+            </button>
+          </div>
+          <div class=modal-body>
+            <div class=input-group>
+              <input type=text class=form-control name=url ng-model="url" placeholder=https://www.youtube.com/watch?v= required>
+              <span class=input-group-addon>
+                <input type=checkbox name=playlist ng-model="playlist">Playlist
+              </span>
+            </div>
+          </div>
+          <div class=modal-footer>
+            <button type=button class="btn btn-secondary" data-dismiss=modal>Cancelar</button>
+            <button type=submit class="btn btn-primary" data-dismiss=modal ng-click="addUrl()">Adicionar</button>
           </div>
         </div>
-        <div class=modal-footer>
-          <button type=button class="btn btn-secondary" data-dismiss=modal>Cancelar</button>
-          <button type=submit class="btn btn-primary" data-dismiss=modal ng-click="addUrl()">Adicionar</button>
-        </div>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
-</div>
-<div ng-controller="PlayerController">
-  <div class=card style="margin-top: 1em;">
+  <div id="escapingBallG" ng-class="{'hide-me': handshake}">
+    <div id="escapingBall_1" class="escapingBallG"></div>
+  </div>
+  <div id=content-messages ng-class="{'hide-me': !handshake}">
+    <div class="alert alert-{{message.type}} alert-dismissible fade show" ng-repeat="message in messages" ng-bind="message.message" role=alert ></div>
+  </div>
+  <div class="card hide-me" ng-class="{'hide-me': !handshake}" style="margin-top: 1em;">
     <h4 class="card-header text-center">
       <a ng-href="{{ player.curItem.webpageUrl }}" ng-bind="player.curItem.title"></a>
-      <a id=closeBtn class="btn btn-danger float-right" href=leave >✖️</a>
+      <a id=closeBtn class="btn btn-danger float-right" href=leave ng-click="closePlayer($event)" >✖️</a>
     </h4>
     <div class="card-body p-0">
       <div class=card-group>
@@ -102,17 +108,17 @@
       </div>
     </div>
   </div>
-  <div class=card style="min-height: 20em; margin-top: 1em;">
+  <div id="playlistCard" class="card hide-me" ng-class="{'hide-me': !handshake}" style="min-height: 20em; margin-top: 1em;">
     <h4 id=playlistHeader class="card-header text-center">Playlist <span ng-bind="player.queue+'/'+(player.queue+player.items)+(player.items ? ' 🔄' : '')"></span></h4>
     <div class="card-body p-0" style="overflow-y: auto">
       <table class="table table-sm table-hover m-0">
         <tbody id=tableList >
-            <tr ng-repeat="link in player.playlist" ng-class="{'table-primary': link.id === player.curItem.id}">
+            <tr ng-repeat="item in player.playlist track by item.id" ng-init="$last && setPlaylistLayout()" ng-class="{'table-primary': item.id === player.curItem.id}">
               <th class=text-center scope=row ng-bind="$index+1"></th>
               <td class=text-center ><a href=# ng-click="ajaxAction('play', $index)">▶️</a></td>
               <td class=text-center ><a href=# ng-click="ajaxAction('remove', $index)">❌</a></td>
-              <td class=text-center ng-bind="(link.duration*1000) | date:'mm:ss'"></td>
-              <td><a ng-href="{{ link.webpageUrl }}" ng-bind="link.title"></a></td>
+              <td class=text-center ng-bind="(item.duration*1000) | date:'mm:ss'"></td>
+              <td><a ng-href="{{ item.webpageUrl }}" ng-bind="item.title"></a></td>
             </tr>
         </tbody>
       </table>

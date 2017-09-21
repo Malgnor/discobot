@@ -8,18 +8,44 @@ from disco.voice.packets import VoiceOPCode
 from disco.voice.playable import UnbufferedOpusEncoderPlayable, YoutubeDLInput
 from disco.voice.player import Player
 from disco.voice.queue import PlayableQueue
-from flask import abort, flash, jsonify, redirect, request, url_for
+from flask import abort, jsonify, redirect, request, url_for
 
 from Utils import ServerSentEvent, remove_angular_brackets
+
+
+def gen_player_data(player):
+    data = {}
+    data['paused'] = True if player.paused else False
+    data['volume'] = player.volume
+    data['duckingVolume'] = player.ducking_volume
+    data['autopause'] = player.autopause
+    data['autovolume'] = player.autovolume
+    data['queue'] = len(player.queue)
+    data['items'] = len(player.items)
+    data['playlist'] = [{'id': value.info['id'], 'title':value.info['title'],
+                         'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in player.queue]
+    data['curItem'] = None
+    if player.now_playing:
+        data['curItem'] = {
+            'id': player.now_playing.info['id'],
+            'duration': player.now_playing.info['duration'],
+            'webpageUrl': player.now_playing.info['webpage_url'],
+            'title': player.now_playing.info['title'],
+            'thumbnail': player.now_playing.info['thumbnail'],
+            'fps': player.now_playing.sampling_rate * player.now_playing.sample_size / player.now_playing.frame_size,
+            'frame': player.tell_or_seek() / player.now_playing.frame_size
+        }
+
+    return data
 
 
 class CircularQueue(PlayableQueue):
     def get(self):
         # pylint: disable=W0212
         item = self._get()
-        new_item = YoutubeDLInput(item.source._url, item.source._ie_info)
-        new_item._info = item.info
-        self.append(new_item.pipe(UnbufferedOpusEncoderPlayable))
+        if item.source and item.source._buffer and item.source._buffer.seekable():
+            item.source._buffer.seek(0)
+        self.append(item)
         return item
 
     def remove(self, index):
@@ -33,6 +59,12 @@ class CircularQueue(PlayableQueue):
         if self._event:
             self._event.set()
             self._event = None
+
+    def contains(self, item, func):
+        for i in self._data:
+            if func(i, item):
+                return True
+        return False
 
 
 class MusicPlayer(Player):
@@ -50,6 +82,7 @@ class MusicPlayer(Player):
         self.anyonespeaking = False
         self.items = PlayableQueue()
         self.listeners = []
+        self.send_stats = False
 
         gevent.spawn(self.__add_items)
         gevent.spawn(self.__keep_alive)
@@ -69,6 +102,7 @@ class MusicPlayer(Player):
             nickname = nickname[:29] + '...'
         self.guild_member.set_nickname(nickname)
         self.update_volume()
+        self.send_stats = True
 
     def on_disconnect_or_empty_queue(self):
         self.guild_member.set_nickname(self.nick)
@@ -149,8 +183,9 @@ class MusicPlayer(Player):
     def __add_items(self):
         while True:
             try:
-                item = self.items.get().pipe(UnbufferedOpusEncoderPlayable)                
-                if item.info:
+                item = self.items.get()
+                if item.info and not self.queue.contains(item, lambda i1, i2: i1.info['id'] == i2.info['id']):
+                    item = item.pipe(UnbufferedOpusEncoderPlayable)
                     self.queue.append(item)
                     self.add_event(event='playlistadd', data=json.dumps(
                         {'id': item.info['id'], 'duration': item.info['duration'], 'webpageUrl': item.info['webpage_url'], 'title': item.info['title'],
@@ -160,11 +195,15 @@ class MusicPlayer(Player):
             if self.__clear:
                 self.__clear = False
                 self.queue.clear()
+                self.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
+                                                                         'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in self.queue]))
 
     def clear(self):
         self.items.clear()
         self.queue.clear()
         self.__clear = True
+        self.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
+                                                                 'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in self.queue]))
 
     def tell_or_seek(self, offset=None):
         # pylint: disable=W0212
@@ -172,6 +211,7 @@ class MusicPlayer(Player):
             if offset is None:
                 return self.now_playing.source._buffer.tell()
             self.now_playing.source._buffer.seek(offset)
+            self.send_stats = True
             return offset
         return -1
 
@@ -187,28 +227,11 @@ class MusicPlayer(Player):
         while True:
             gevent.sleep(1)
             count += 1
-            if count == 5:
+            if self.send_stats or count == 5:
+                self.send_stats = False
                 count = 0
-                data = {}
-                data['paused'] = True if self.paused else False
-                data['volume'] = self.volume
-                data['duckingVolume'] = self.ducking_volume
-                data['autopause'] = self.autopause
-                data['autovolume'] = self.autovolume
-                data['queue'] = len(self.queue)
-                data['items'] = len(self.items)
-                data['curItem'] = None
-                if self.now_playing:
-                    data['curItem'] = {
-                        'id': self.now_playing.info['id'],
-                        'duration': self.now_playing.info['duration'],
-                        'webpageUrl': self.now_playing.info['webpage_url'],
-                        'title': self.now_playing.info['title'],
-                        'thumbnail': self.now_playing.info['thumbnail'],
-                        'fps': self.now_playing.sampling_rate * self.now_playing.sample_size / self.now_playing.frame_size,
-                        'frame': self.tell_or_seek() / self.now_playing.frame_size
-                    }
-                self.add_event(event='stats', data=json.dumps(data))
+                self.add_event(event='stats', data=json.dumps(
+                    gen_player_data(self)))
                 continue
             self.add_event(comment='keepalive')
 
@@ -225,6 +248,7 @@ class MusicPlugin(Plugin):
                 player = self.get_player(event.guild.id)
                 if event.state.deaf and player.now_playing:
                     player.skip()
+                    player.send_stats = True
             except CommandError:
                 pass
 
@@ -280,19 +304,24 @@ class MusicPlugin(Plugin):
     @Plugin.command('shuffle', description='Embaralha a playlist.')
     def on_shuffle(self, event):
         self.get_player(event.guild.id).queue.shuffle()
+        self.get_player(event.guild.id).add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
+                                                                                            'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in self.get_player(event.guild.id).queue]))
 
     @Plugin.command('pause', description='Pausa o player.')
     def on_pause(self, event):
         self.get_player(event.guild.id).pause()
+        self.get_player(event.guild.id).send_stats = True
 
     @Plugin.command('resume', description='Despausa o player.')
     def on_resume(self, event):
         self.get_player(event.guild.id).resume()
+        self.get_player(event.guild.id).send_stats = True
 
     @Plugin.command('skip', description='Pula o item atual.')
     def on_skip(self, event):
         if self.get_player(event.guild.id).now_playing:
             self.get_player(event.guild.id).skip()
+            self.get_player(event.guild.id).send_stats = True
 
     @Plugin.command('link', description='Mostra o link do item atual.')
     def on_link(self, event):
@@ -305,12 +334,14 @@ class MusicPlugin(Plugin):
     def on_autopause(self, event):
         self.get_player(event.guild.id).autopause = not self.get_player(
             event.guild.id).autopause
+        self.get_player(event.guild.id).send_stats = True
         return event.msg.reply('Autopause foi {}.'.format('ativado' if self.get_player(event.guild.id).autopause else 'desativado'))
 
     @Plugin.command('autovolume', description='Ativa/desativa o autovolume.')
     def on_autovolume(self, event):
         self.get_player(event.guild.id).autovolume = not self.get_player(
             event.guild.id).autovolume
+        self.get_player(event.guild.id).send_stats = True
         return event.msg.reply('Autovolume foi {}.'.format('ativado' if self.get_player(event.guild.id).autovolume else 'desativado'))
 
     @Plugin.command('volume', '[vol:float]', description='Altera o volume.')
@@ -318,6 +349,7 @@ class MusicPlugin(Plugin):
         player = self.get_player(event.guild.id)
         if vol:
             player.volume = vol
+            player.send_stats = True
         else:
             return event.msg.reply('Volume atual: {}'.format(player.volume))
 
@@ -326,6 +358,7 @@ class MusicPlugin(Plugin):
         player = self.get_player(event.guild.id)
         if vol:
             player.ducking_volume = vol
+            player.send_stats = True
         else:
             return event.msg.reply('Atenuação atual: {}'.format(player.ducking_volume))
 
@@ -396,21 +429,26 @@ class MusicPlugin(Plugin):
             abort(400)
 
         url = request.form['url']
+        message = {}
 
         if 'playlist' in request.form:
             items = list(YoutubeDLInput.many(url))
             for item in items:
                 self.get_player(guild).items.append(item)
-            flash('{} foram adicionados na playlist.'.format(
-                len(items)), 'success')
+            message['message'] = '{} foram adicionados na playlist.'.format(
+                len(items))
+            message['type'] = 'success'
+            self.get_player(guild).send_stats = True
         else:
             item = YoutubeDLInput(url)
 
             self.get_player(guild).items.append(item)
-            flash('"{}" foi adicionado na playlist.'.format(
-                item.info['title']), 'success')
+            message['message'] = '"{}" foi adicionado na playlist.'.format(
+                item.info['title'])
+            message['type'] = 'success'
+            self.get_player(guild).send_stats = True
 
-        return jsonify(action='add', data={'url': url})
+        return jsonify(action='add', data={'url': url}, message=message)
 
     @Plugin.route('/player/<int:guild>/<string:action>')
     def on_player_queue_action_route(self, guild, action):
@@ -420,27 +458,36 @@ class MusicPlugin(Plugin):
 
         player = self.get_player(guild)
         data = {}
+        message = {}
 
         if action == 'shuffle':
             player.queue.shuffle()
-            flash('Playlist foi embaralhada.', 'info')
+            message['message'] = 'Playlist foi embaralhada.'
+            message['type'] = 'info'
+            player.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
+                                                                       'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in player.queue]))
         elif action == 'clear':
             player.clear()
-            flash('Playlist foi esvaziada.', 'info')
+            message['message'] = 'Playlist foi esvaziada.'
+            message['type'] = 'info'
         elif action == 'play' or action == 'resume':
             player.resume()
-            flash('O player foi despausado.', 'info')
+            data['paused'] = True if player.paused else False
+            message['message'] = 'O player foi despausado.'
+            message['type'] = 'info'
         elif action == 'pause':
             player.pause()
-            flash('O player foi pausado.', 'info')
+            data['paused'] = True if player.paused else False
+            message['message'] = 'O player foi pausado.'
+            message['type'] = 'info'
         elif action == 'skip':
             if player.now_playing:
                 player.skip()
             player.resume()
+            data['paused'] = True if player.paused else False
         elif action == 'leave':
             player.disconnect()
             del self.guilds[guild]
-            flash('O player foi desconectado.', 'warning')
             return redirect(url_for('on_player_route'))
         elif action == 'duck':
             player.autovolume = True
@@ -456,7 +503,9 @@ class MusicPlugin(Plugin):
         else:
             abort(400)
 
-        return jsonify(action=action, data=data)
+        player.send_stats = True
+
+        return jsonify(action=action, data=data, message=message)
 
     @Plugin.route('/player/<int:guild>/<string:action>/<value>')
     def on_player_action_route(self, guild, action, value):
@@ -466,11 +515,17 @@ class MusicPlugin(Plugin):
 
         player = self.get_player(guild)
         data = {}
+        message = {}
 
         if action == 'remove':
             index = int(value)
             data['index'] = index
             item = player.queue.remove(index)
+            message['message'] = '{} foi removido da playlist.'.format(
+                item.info['title'])
+            message['type'] = 'info'
+            player.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
+                                                                       'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in player.queue]))
         elif action == 'play':
             index = int(value)
             data['index'] = index
@@ -480,6 +535,11 @@ class MusicPlugin(Plugin):
                 if player.now_playing:
                     player.skip()
                 player.resume()
+                message['message'] = '{} está tocando agora.'.format(
+                    item.info['title'])
+                message['type'] = 'info'
+                player.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
+                                                                           'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in player.queue]))
         elif action == 'vol':
             volume = float(value)
             player.volume = volume
@@ -487,7 +547,7 @@ class MusicPlugin(Plugin):
         elif action == 'dvol':
             volume = float(value)
             player.ducking_volume = volume
-            data['dvolume'] = volume
+            data['duckingVolume'] = volume
         elif action == 'seek':
             if player.now_playing:
                 seconds = int(value)
@@ -497,7 +557,9 @@ class MusicPlugin(Plugin):
         else:
             abort(400)
 
-        return jsonify(action=action, data=data)
+        player.send_stats = True
+
+        return jsonify(action=action, data=data, message=message)
 
     @Plugin.route("/player/<int:guild>/events/")
     def on_subscribe_events(self, guild):
@@ -508,28 +570,7 @@ class MusicPlugin(Plugin):
 
         player = self.get_player(guild)
 
-        data = {}
-
-        data['paused'] = True if player.paused else False
-        data['volume'] = player.volume
-        data['duckingVolume'] = player.ducking_volume
-        data['autopause'] = player.autopause
-        data['autovolume'] = player.autovolume
-        data['queue'] = len(player.queue)
-        data['items'] = len(player.items)
-        data['playlist'] = [{'id': value.info['id'], 'title':value.info['title'],
-                             'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in player.queue]
-        data['curItem'] = None
-        if player.now_playing:
-            data['curItem'] = {
-                'id': player.now_playing.info['id'],
-                'duration': player.now_playing.info['duration'],
-                'webpageUrl': player.now_playing.info['webpage_url'],
-                'title': player.now_playing.info['title'],
-                'thumbnail': player.now_playing.info['thumbnail'],
-                'fps': player.now_playing.sampling_rate * player.now_playing.sample_size / player.now_playing.frame_size,
-                'frame': player.tell_or_seek() / player.now_playing.frame_size
-            }
+        data = gen_player_data(player)
 
         def gen():
             queue = gevent.queue.Queue()
