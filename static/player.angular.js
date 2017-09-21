@@ -1,6 +1,9 @@
 'use strict';
 
 angular.module('playerApp', [])
+    .config(['$compileProvider', function ($compileProvider) {
+        $compileProvider.debugInfoEnabled(false);
+    }])
     .factory('playerSSE', function () {
         var eventf = function (func) {
             return function (event) {
