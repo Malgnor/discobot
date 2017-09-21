@@ -370,9 +370,6 @@ class MusicPlugin(Plugin):
     def on_player_route(self, guild=0):
         from flask import render_template
 
-        if 'angular' in request.args:
-            return render_template('player.angular.html')
-
         try:
             channelid = int(request.args.get('channel', 0))
         except ValueError as exception:
@@ -397,7 +394,10 @@ class MusicPlugin(Plugin):
             else:
                 return jsonify(error='Canal precisa ser um canal do tipo voz e pertencer a uma guild.\nCanal: {}\nGuild: {}\nVoz: {}'.format(channel, channel.is_guild, channel.is_voice))
 
-        return render_template('player.html', player=self.guilds.get(guild))
+        if 'notangular' in request.args or self.guilds.get(guild) is None:
+            return render_template('player.html', player=self.guilds.get(guild))
+
+        return render_template('player.angular.html')
 
     @Plugin.route('/player/join/')
     def on_player_join_route(self):
