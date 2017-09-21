@@ -7,8 +7,6 @@
 <meta property=og:description content="Controle o bot atrav&eacute;s da web."/>
 {{ super() }}
 <link rel=stylesheet href="{{ url_for('static', filename='player.css') }}">
-
-<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.5/angular.min.js" crossorigin=anonymous></script>
 {% endblock %}
 {% block content %}
 {% raw %}
@@ -44,7 +42,7 @@
     <div id="escapingBall_1" class="escapingBallG"></div>
   </div>
   <div id=content-messages ng-class="{'hide-me': !handshake}">
-    <div class="alert alert-{{message.type}} alert-dismissible fade show" ng-repeat="message in messages" ng-bind="message.message" role=alert ></div>
+    <div class="alert alert-{{message.type}} alert-dismissible alert-animate" ng-repeat="message in messages" ng-bind="message.message" role=alert ></div>
   </div>
   <div class="card hide-me" ng-class="{'hide-me': !handshake}" style="margin-top: 1em;">
     <h4 class="card-header text-center">
@@ -113,7 +111,7 @@
     <div class="card-body p-0" style="overflow-y: auto">
       <table class="table table-sm table-hover m-0">
         <tbody id=tableList >
-            <tr ng-repeat="item in player.playlist track by item.id" ng-init="$last && setPlaylistLayout()" ng-class="{'table-primary': item.id === player.curItem.id}">
+            <tr class=playlist-animate ng-repeat="item in player.playlist track by item.id" ng-init="$last && setPlaylistLayout()" ng-class="{'table-primary': item.id === player.curItem.id}">
               <th class=text-center scope=row ng-bind="$index+1"></th>
               <td class=text-center ><a href=# ng-click="ajaxAction('play', $index)">▶️</a></td>
               <td class=text-center ><a href=# ng-click="ajaxAction('remove', $index)">❌</a></td>
@@ -134,5 +132,7 @@
 {% endraw %}
 {% endblock content %}
 {% block scripts %}
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.5/angular.min.js" crossorigin=anonymous></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.5/angular-animate.min.js" crossorigin=anonymous></script>
 <script src="{{ url_for('static', filename='player.angular.js') }}"></script>
 {% endblock %}

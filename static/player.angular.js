@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('playerApp', [])
+angular.module('playerApp', ['ngAnimate'])
     .factory('playerSSE', function () {
         var eventf = function (func) {
             return function (event) {
@@ -119,7 +119,7 @@ angular.module('playerApp', [])
         };
 
         $scope.setPlaylistLayout = function () {
-            playlistCard.outerHeight($window.height - playlistCard.offset().top - 2);
+            playlistCard.outerHeight($window.innerHeight - playlistCard.offset().top - 2);
         };
 
         $scope.closePlayer = function ($event) {
@@ -148,6 +148,8 @@ angular.module('playerApp', [])
         $('#seekControl').on('change', function () {
             $scope.ajaxAction('seek', Math.round($scope.player.frames / $scope.player.curItem.fps));
         });
+
+        $scope.setPlaylistLayout();
 
     }])
     .filter('pct', function () {

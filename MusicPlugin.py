@@ -196,6 +196,7 @@ class MusicPlayer(Player):
             if self.__clear:
                 self.__clear = False
                 self.queue.clear()
+                self.send_stats = True
                 self.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
                                                                          'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in self.queue]))
 
@@ -203,6 +204,7 @@ class MusicPlayer(Player):
         self.items.clear()
         self.queue.clear()
         self.__clear = True
+        self.send_stats = True
         self.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
                                                                  'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in self.queue]))
 

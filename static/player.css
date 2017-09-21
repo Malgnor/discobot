@@ -17,11 +17,52 @@
 }
 
 #content-messages {
+	overflow: hidden;
 	position: absolute;
 	top: 1em;
 	right: 1em;
 	z-index: 10;
 }
+
+/*  */
+
+.playlist-animate.ng-move,
+.playlist-animate.ng-enter,
+.playlist-animate.ng-leave {
+  transition:all linear 0.5s;
+}
+
+.playlist-animate.ng-enter,
+.playlist-animate.ng-leave.ng-leave-active {
+	opacity: 0;
+}
+
+.playlist-animate.ng-enter.ng-enter-active,
+.playlist-animate.ng-leave {
+	opacity: 1;
+}
+
+.alert-animate {
+	position: relative;
+}
+
+.alert-animate.ng-move,
+.alert-animate.ng-enter,
+.alert-animate.ng-leave {
+  transition:all linear 0.5s;
+}
+
+.alert-animate.ng-enter,
+.alert-animate.ng-leave.ng-leave-active {
+	right: -100%;
+}
+
+.alert-animate.ng-enter.ng-enter-active,
+.alert-animate.ng-leave {
+	right: 0;
+}
+
+/*  */
 
 #escapingBallG{
 	position:absolute;
