@@ -82,6 +82,7 @@ class MusicPlayer(Player):
         self.anyonespeaking = False
         self.items = PlayableQueue()
         self.listeners = []
+        self.send_stats = False
 
         gevent.spawn(self.__add_items)
         gevent.spawn(self.__keep_alive)
@@ -101,6 +102,7 @@ class MusicPlayer(Player):
             nickname = nickname[:29] + '...'
         self.guild_member.set_nickname(nickname)
         self.update_volume()
+        self.send_stats = True
 
     def on_disconnect_or_empty_queue(self):
         self.guild_member.set_nickname(self.nick)
@@ -188,17 +190,21 @@ class MusicPlayer(Player):
                     self.queue.append(item)
                     self.add_event(event='playlistadd', data=json.dumps(
                         {'id': item.info['id'], 'duration': item.info['duration'], 'webpageUrl': item.info['webpage_url'], 'title': item.info['title'],
-                            'thumbnail': item.info['thumbnail'], 'fps': item.sampling_rate * item.sample_size / item.frame_size, 'frame': 0}))
+                         'thumbnail': item.info['thumbnail'], 'fps': item.sampling_rate * item.sample_size / item.frame_size, 'frame': 0}))
             except Exception:  # pylint: disable=W0703
                 pass
             if self.__clear:
                 self.__clear = False
                 self.queue.clear()
+                self.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
+                                                                         'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in self.queue]))
 
     def clear(self):
         self.items.clear()
         self.queue.clear()
         self.__clear = True
+        self.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
+                                                                 'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in self.queue]))
 
     def tell_or_seek(self, offset=None):
         # pylint: disable=W0212
@@ -206,6 +212,7 @@ class MusicPlayer(Player):
             if offset is None:
                 return self.now_playing.source._buffer.tell()
             self.now_playing.source._buffer.seek(offset)
+            self.send_stats = True
             return offset
         return -1
 
@@ -221,7 +228,8 @@ class MusicPlayer(Player):
         while True:
             gevent.sleep(1)
             count += 1
-            if count == 5:
+            if self.send_stats or count == 5:
+                self.send_stats = False
                 count = 0
                 self.add_event(event='stats', data=json.dumps(
                     gen_player_data(self)))
@@ -241,6 +249,7 @@ class MusicPlugin(Plugin):
                 player = self.get_player(event.guild.id)
                 if event.state.deaf and player.now_playing:
                     player.skip()
+                    player.send_stats = True
             except CommandError:
                 pass
 
@@ -296,19 +305,24 @@ class MusicPlugin(Plugin):
     @Plugin.command('shuffle', description='Embaralha a playlist.')
     def on_shuffle(self, event):
         self.get_player(event.guild.id).queue.shuffle()
+        self.get_player(event.guild.id).add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
+                                                                                            'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in self.get_player(event.guild.id).queue]))
 
     @Plugin.command('pause', description='Pausa o player.')
     def on_pause(self, event):
         self.get_player(event.guild.id).pause()
+        self.get_player(event.guild.id).send_stats = True
 
     @Plugin.command('resume', description='Despausa o player.')
     def on_resume(self, event):
         self.get_player(event.guild.id).resume()
+        self.get_player(event.guild.id).send_stats = True
 
     @Plugin.command('skip', description='Pula o item atual.')
     def on_skip(self, event):
         if self.get_player(event.guild.id).now_playing:
             self.get_player(event.guild.id).skip()
+            self.get_player(event.guild.id).send_stats = True
 
     @Plugin.command('link', description='Mostra o link do item atual.')
     def on_link(self, event):
@@ -321,12 +335,14 @@ class MusicPlugin(Plugin):
     def on_autopause(self, event):
         self.get_player(event.guild.id).autopause = not self.get_player(
             event.guild.id).autopause
+        self.get_player(event.guild.id).send_stats = True
         return event.msg.reply('Autopause foi {}.'.format('ativado' if self.get_player(event.guild.id).autopause else 'desativado'))
 
     @Plugin.command('autovolume', description='Ativa/desativa o autovolume.')
     def on_autovolume(self, event):
         self.get_player(event.guild.id).autovolume = not self.get_player(
             event.guild.id).autovolume
+        self.get_player(event.guild.id).send_stats = True
         return event.msg.reply('Autovolume foi {}.'.format('ativado' if self.get_player(event.guild.id).autovolume else 'desativado'))
 
     @Plugin.command('volume', '[vol:float]', description='Altera o volume.')
@@ -334,6 +350,7 @@ class MusicPlugin(Plugin):
         player = self.get_player(event.guild.id)
         if vol:
             player.volume = vol
+            player.send_stats = True
         else:
             return event.msg.reply('Volume atual: {}'.format(player.volume))
 
@@ -342,6 +359,7 @@ class MusicPlugin(Plugin):
         player = self.get_player(event.guild.id)
         if vol:
             player.ducking_volume = vol
+            player.send_stats = True
         else:
             return event.msg.reply('Atenuação atual: {}'.format(player.ducking_volume))
 
@@ -421,6 +439,7 @@ class MusicPlugin(Plugin):
             message['message'] = '{} foram adicionados na playlist.'.format(
                 len(items))
             message['type'] = 'success'
+            self.get_player(guild).send_stats = True
         else:
             item = YoutubeDLInput(url)
 
@@ -428,6 +447,7 @@ class MusicPlugin(Plugin):
             message['message'] = '"{}" foi adicionado na playlist.'.format(
                 item.info['title'])
             message['type'] = 'success'
+            self.get_player(guild).send_stats = True
 
         return jsonify(action='add', data={'url': url}, message=message)
 
@@ -445,27 +465,30 @@ class MusicPlugin(Plugin):
             player.queue.shuffle()
             message['message'] = 'Playlist foi embaralhada.'
             message['type'] = 'info'
+            player.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
+                                                                       'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in player.queue]))
         elif action == 'clear':
             player.clear()
             message['message'] = 'Playlist foi esvaziada.'
             message['type'] = 'info'
         elif action == 'play' or action == 'resume':
             player.resume()
+            data['paused'] = True if player.paused else False
             message['message'] = 'O player foi despausado.'
             message['type'] = 'info'
         elif action == 'pause':
             player.pause()
+            data['paused'] = True if player.paused else False
             message['message'] = 'O player foi pausado.'
             message['type'] = 'info'
         elif action == 'skip':
             if player.now_playing:
                 player.skip()
             player.resume()
+            data['paused'] = True if player.paused else False
         elif action == 'leave':
             player.disconnect()
             del self.guilds[guild]
-            message['message'] = 'O player foi desconectado.'
-            message['type'] = 'warning'
             return redirect(url_for('on_player_route'))
         elif action == 'duck':
             player.autovolume = True
@@ -481,7 +504,9 @@ class MusicPlugin(Plugin):
         else:
             abort(400)
 
-        return jsonify(action=action, data=data, message={})
+        player.send_stats = True
+
+        return jsonify(action=action, data=data, message=message)
 
     @Plugin.route('/player/<int:guild>/<string:action>/<value>')
     def on_player_action_route(self, guild, action, value):
@@ -491,11 +516,17 @@ class MusicPlugin(Plugin):
 
         player = self.get_player(guild)
         data = {}
+        message = {}
 
         if action == 'remove':
             index = int(value)
             data['index'] = index
             item = player.queue.remove(index)
+            message['message'] = '{} foi removido da playlist.'.format(
+                item.info['title'])
+            message['type'] = 'info'
+            player.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
+                                                                       'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in player.queue]))
         elif action == 'play':
             index = int(value)
             data['index'] = index
@@ -505,6 +536,11 @@ class MusicPlugin(Plugin):
                 if player.now_playing:
                     player.skip()
                 player.resume()
+                message['message'] = '{} está tocando agora.'.format(
+                    item.info['title'])
+                message['type'] = 'info'
+                player.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
+                                                                           'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in player.queue]))
         elif action == 'vol':
             volume = float(value)
             player.volume = volume
@@ -512,7 +548,7 @@ class MusicPlugin(Plugin):
         elif action == 'dvol':
             volume = float(value)
             player.ducking_volume = volume
-            data['dvolume'] = volume
+            data['duckingVolume'] = volume
         elif action == 'seek':
             if player.now_playing:
                 seconds = int(value)
@@ -522,7 +558,9 @@ class MusicPlugin(Plugin):
         else:
             abort(400)
 
-        return jsonify(action=action, data=data)
+        player.send_stats = True
+
+        return jsonify(action=action, data=data, message=message)
 
     @Plugin.route("/player/<int:guild>/events/")
     def on_subscribe_events(self, guild):
