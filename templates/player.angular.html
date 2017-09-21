@@ -77,13 +77,13 @@
             <li class=list-group-item>
               <div class=btn-group data-toggle=buttons>
                 <label ng-click="ajaxAction('noduckorpause')" class="btn btn-secondary" ng-class="{active: !(player.autovolume || player.autopause)}" data-toggle=list data-target=#notDuck role=tab>
-                  <input type=radio name=options id=option1 value=none autocomplete=off ng-checked="!(player.autovolume || player.autopause)">Nenhum
+                  <input type=radio name=options id=option1 value=none autocomplete=off ng-model="auto" ng-change="onAuto()" ng-checked="!(player.autovolume || player.autopause)">Nenhum
                 </label>
                 <label ng-click="ajaxAction('duck')" class="btn btn-secondary" ng-class="{active: player.autovolume}" data-toggle=list data-target=#duckInput role=tab>
-                  <input type=radio name=options id=option2 value=duck autocomplete=off ng-checked="player.autovolume">Atenuar
+                  <input type=radio name=options id=option2 value=duck autocomplete=off ng-model="auto" ng-change="onAuto()" ng-checked="player.autovolume">Atenuar
                 </label>
                 <label ng-click="ajaxAction('autopause')" class="btn btn-secondary" ng-class="{active: player.autopause}" data-toggle=list data-target=#notDuck role=tab>
-                  <input type=radio name=options id=option3 value=pause autocomplete=off ng-checked="player.autopause">Pausar
+                  <input type=radio name=options id=option3 value=pause autocomplete=off ng-model="auto" ng-change="onAuto()" ng-checked="player.autopause">Pausar
                 </label>
               </div>
               <div class=tab-content>
