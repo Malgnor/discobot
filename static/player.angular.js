@@ -3,6 +3,8 @@
 angular.module('playerApp', [])
     .config(['$compileProvider', function ($compileProvider) {
         $compileProvider.debugInfoEnabled(false);
+        $compileProvider.commentDirectivesEnabled(false);
+        $compileProvider.cssClassDirectivesEnabled(false);
     }])
     .factory('playerSSE', function () {
         var eventf = function (func) {
