@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('playerApp', [])
+angular.module('playerApp', ['ngAnimate'])
     .config(['$compileProvider', function ($compileProvider) {
         $compileProvider.debugInfoEnabled(false);
         $compileProvider.commentDirectivesEnabled(false);
@@ -58,6 +58,15 @@ angular.module('playerApp', [])
         playerSSE.on('handshake', function (data) {
             $scope.handshake = true;
             $.extend(true, $scope.player, data);
+
+            if($scope.player.autopause){
+                $scope.auto = 'pause';
+            } else if($scope.player.autovolume){
+                $scope.auto = 'duck';
+            } else {
+                $scope.auto = 'none';
+            }
+
             if ($scope.player.curItem) $scope.player.frames = $scope.player.curItem.frame;
             setSeekInterval();
             $scope.$digest();
@@ -69,6 +78,15 @@ angular.module('playerApp', [])
 
         playerSSE.on('stats', function (data) {
             $.extend(true, $scope.player, data);
+
+            if($scope.player.autopause){
+                $scope.auto = 'pause';
+            } else if($scope.player.autovolume){
+                $scope.auto = 'duck';
+            } else {
+                $scope.auto = 'none';
+            }
+
             if ($scope.player.curItem) $scope.player.frames = $scope.player.curItem.frame;
             setSeekInterval();
             $scope.$digest();
@@ -100,13 +118,13 @@ angular.module('playerApp', [])
         $scope.ajaxSuccess = function (data) {
             if (data.message && data.message.message) {
                 $scope.messages.push(data.message)
-                $timeout(function () { $scope.messages.shift(); $scope.$digest(); }, 2000);
+                $timeout(function () { $scope.messages.shift(); $scope.$digest(); }, 2500);
                 $scope.$digest();
             }
         };
 
         $scope.setPlaylistLayout = function () {
-            playlistCard.outerHeight($window.height - playlistCard.offset().top - 2);
+            playlistCard.outerHeight($window.innerHeight - playlistCard.offset().top - 2);
         };
 
         $scope.closePlayer = function ($event) {
@@ -115,9 +133,28 @@ angular.module('playerApp', [])
             }
         };
 
+        $scope.onAuto = function(){
+            switch($scope.auto){
+                case 'none':
+                    $scope.player.autopause = false;
+                    $scope.player.autovolume = false;
+                    break;
+                case 'duck':
+                    $scope.player.autopause = false;
+                    $scope.player.autovolume = true;
+                    break;
+                case 'pause':
+                    $scope.player.autopause = true;
+                    $scope.player.autovolume = false;
+                    break;
+            }
+        };
+
         $('#seekControl').on('change', function () {
             $scope.ajaxAction('seek', Math.round($scope.player.frames / $scope.player.curItem.fps));
         });
+
+        $scope.setPlaylistLayout();
 
     }])
     .filter('pct', function () {

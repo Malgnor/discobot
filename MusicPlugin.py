@@ -195,6 +195,7 @@ class MusicPlayer(Player):
             if self.__clear:
                 self.__clear = False
                 self.queue.clear()
+                self.send_stats = True
                 self.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
                                                                          'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in self.queue]))
 
@@ -202,6 +203,7 @@ class MusicPlayer(Player):
         self.items.clear()
         self.queue.clear()
         self.__clear = True
+        self.send_stats = True
         self.add_event(event='playlistupdate', data=json.dumps([{'id': value.info['id'], 'title':value.info['title'],
                                                                  'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in self.queue]))
 
@@ -367,9 +369,6 @@ class MusicPlugin(Plugin):
     def on_player_route(self, guild=0):
         from flask import render_template
 
-        if 'angular' in request.args:
-            return render_template('player.angular.html')
-
         try:
             channelid = int(request.args.get('channel', 0))
         except ValueError as exception:
@@ -394,7 +393,10 @@ class MusicPlugin(Plugin):
             else:
                 return jsonify(error='Canal precisa ser um canal do tipo voz e pertencer a uma guild.\nCanal: {}\nGuild: {}\nVoz: {}'.format(channel, channel.is_guild, channel.is_voice))
 
-        return render_template('player.html', player=self.guilds.get(guild))
+        if 'notangular' in request.args or self.guilds.get(guild) is None:
+            return render_template('player.html', player=self.guilds.get(guild))
+
+        return render_template('player.angular.html')
 
     @Plugin.route('/player/join/')
     def on_player_join_route(self):
