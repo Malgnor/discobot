@@ -1,70 +1,19 @@
 import json
+import os
 
 import gevent
 from disco.bot import Plugin
 from disco.bot.command import CommandError
 from disco.voice.client import VoiceException
 from disco.voice.packets import VoiceOPCode
-from disco.voice.playable import UnbufferedOpusEncoderPlayable, YoutubeDLInput
 from disco.voice.player import Player
 from disco.voice.queue import PlayableQueue
 from flask import abort, jsonify, redirect, request, url_for
 
+from MPUtils import YoutubeDLFInput as YoutubeDLInput
+from MPUtils import (CircularQueue, UnbufferedOpusEncoderPlayable,
+                     gen_player_data)
 from Utils import ServerSentEvent, remove_angular_brackets
-
-
-def gen_player_data(player):
-    data = {}
-    data['paused'] = True if player.paused else False
-    data['volume'] = player.volume
-    data['duckingVolume'] = player.ducking_volume
-    data['autopause'] = player.autopause
-    data['autovolume'] = player.autovolume
-    data['queue'] = len(player.queue)
-    data['items'] = len(player.items)
-    data['playlist'] = [{'id': value.info['id'], 'title':value.info['title'],
-                         'duration':value.info['duration'], 'webpageUrl':value.info['webpage_url']} for value in player.queue]
-    data['curItem'] = None
-    if player.now_playing:
-        data['curItem'] = {
-            'id': player.now_playing.info['id'],
-            'duration': player.now_playing.info['duration'],
-            'webpageUrl': player.now_playing.info['webpage_url'],
-            'title': player.now_playing.info['title'],
-            'thumbnail': player.now_playing.info['thumbnail'],
-            'fps': player.now_playing.sampling_rate * player.now_playing.sample_size / player.now_playing.frame_size,
-            'frame': player.tell_or_seek() / player.now_playing.frame_size
-        }
-
-    return data
-
-
-class CircularQueue(PlayableQueue):
-    def get(self):
-        # pylint: disable=W0212
-        item = self._get()
-        if item.source and item.source._buffer and item.source._buffer.seekable():
-            item.source._buffer.seek(0)
-        self.append(item)
-        return item
-
-    def remove(self, index):
-        if len(self._data) > index:
-            return self._data.pop(index)
-        return None
-
-    def prepend(self, item):
-        self._data.insert(0, item)
-
-        if self._event:
-            self._event.set()
-            self._event = None
-
-    def contains(self, item, func):
-        for i in self._data:
-            if func(i, item):
-                return True
-        return False
 
 
 class MusicPlayer(Player):
@@ -243,17 +192,8 @@ class MusicPlugin(Plugin):
     def load(self, ctx):
         super(MusicPlugin, self).load(ctx)
         self.guilds = {}  # pylint: disable=W0201
-
-    @Plugin.listen('VoiceStateUpdate')
-    def on_voice_update(self, event):
-        if event.state.user == self.state.me:
-            try:
-                player = self.get_player(event.guild.id)
-                if event.state.deaf and player.now_playing:
-                    player.skip()
-                    player.send_stats = True
-            except CommandError:
-                pass
+        if not os.path.isdir('data'):
+            os.mkdir('data')
 
     @Plugin.command('join', description='Faz o bot se conectar ao seu canal de voz.')
     def on_join(self, event):
