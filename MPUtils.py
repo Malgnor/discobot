@@ -45,7 +45,7 @@ class UnbufferedOpusEncoderPlayable(BasePlayable, OpusEncoder, AbstractOpus):
         self.source = source
         if hasattr(source, 'info'):
             self.info = source.info
-        self.volume = 1.0
+        self.volume = 0.1
 
         library_path = kwargs.pop('library_path', None)
 

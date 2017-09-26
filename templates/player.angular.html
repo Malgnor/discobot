@@ -102,7 +102,7 @@
     <div class="card-footer p-0">
       <div class=input-group>
         <input class="form-control p-0" id=seekControl type=range min=0 max="{{ player.curItem.duration * player.curItem.fps }}" step=1 ng-model="player.frames" value="0" ng-disabled="!player.curItem">
-        <span class=text-center style="border-left: 1px solid #dfdfdf; min-width: 6em" ng-bind="(player.curItem ? (player.frames/player.curItem.fps*1000):0) | date:'mm:ss'"></span>
+        <span class=text-center style="border-left: 1px solid #dfdfdf; min-width: 6em" ng-bind="player.curItem ? ((player.frames/player.curItem.fps*1000) | date:'mm:ss')+'/'+((player.curItem.duration * 1000) | date:'mm:ss') : (0 | date:'mm:ss')"></span>
       </div>
     </div>
   </div>
